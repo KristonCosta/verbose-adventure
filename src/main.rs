@@ -5,6 +5,7 @@ extern crate nalgebra;
 pub mod render_gl;
 pub mod resources;
 mod triangle;
+mod rectangle;
 mod debug;
 
 use gl::Gl;
@@ -102,7 +103,7 @@ impl GlutinState {
         let gl = self.gl.clone();
         let res = Resources::from_relative_exe_path(Path::new("assets"))?;
 
-        let triangle = triangle::Triangle::new(&res, &gl)?;
+        let triangle = rectangle::Rectangle::new(&res, &gl)?;
 
         if let Some(mut context) = self.context.take() {
             let event_loop = context.event_loop.take().unwrap();
