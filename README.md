@@ -4,13 +4,11 @@
 Just another terminal emulator while learning about OpenGL and Rust.
 
 Initially followed the blog series on: 
-http://nercury.github.io
+`http://nercury.github.io`
 
 To look at how to nicely integrate Rust with OpenGL bindings.
 Then going to be going through: 
-https://learnopengl.com
-
-To pick up more OpenGL basics. 
+`https://learnopengl.com` to pick up more OpenGL basics. 
 
 Then lastly going to do the actual font bitmap and rendering.
 

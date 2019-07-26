@@ -27,12 +27,9 @@ use crate::debug::failure_to_string;
 use crate::render_gl::viewport::Viewport;
 use crate::render_gl::color_buffer::ColorBuffer;
 
-
 pub const WINDOW_NAME: &str = "Hello Glutin";
 
-
 pub fn main() {
-
     let mut glutin_state = GlutinState::default();
     if let Err(e) = glutin_state.run() {
         println!("{}", failure_to_string(e));
