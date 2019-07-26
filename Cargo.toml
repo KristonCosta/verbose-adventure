@@ -1,0 +1,24 @@
+[package]
+name = "console-emu"
+version = "0.1.0"
+authors = ["kristoncosta"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+glutin = "0.22.0-alpha1"
+gl = { path = "lib/gl" }
+render_gl_derive = { path = "render_gl_derive" }
+failure = "0.1.5"
+nalgebra = "0.18.0"
+
+[build-dependencies]
+walkdir = "2.2.9"
+
+[dependencies.rusttype]
+version = "0.7.7"
+features = ["gpu_cache"]
+
+[features]
+gl_debug = ["gl/debug"]
