@@ -1,11 +1,14 @@
 use std::path::{PathBuf, Path};
 use std::{io, ffi, fs};
 use std::io::Read;
+use image::{ImageBuffer, GenericImage, ImageError, DynamicImage};
 
 #[derive(Debug, Fail)]
 pub enum Error {
     #[fail(display = "I/O error")]
     Io(#[cause] io::Error),
+    #[fail(display = "Image error")]
+    FailedToLoadImage(#[cause] ImageError),
     #[fail(display = "Failed to read CString from file that contains 0")]
     FileContainsNil,
     #[fail(display = "Failed to get executable path")]
@@ -15,6 +18,12 @@ pub enum Error {
 impl From<io::Error> for Error {
     fn from(other: io::Error) -> Self {
         Error::Io(other)
+    }
+}
+
+impl From<ImageError> for Error {
+    fn from(other: ImageError) -> Self {
+        Error::FailedToLoadImage(other)
     }
 }
 
@@ -45,6 +54,11 @@ impl Resources {
             return Err(Error::FileContainsNil);
         }
         Ok(unsafe {ffi::CString::from_vec_unchecked(buffer)})
+    }
+
+    pub fn load_image(&self, resource_name: &str) -> Result<DynamicImage, Error> {
+        Ok(image::open(
+            resource_name_to_path(&self.root_path, resource_name))?)
     }
 }
 

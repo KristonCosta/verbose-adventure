@@ -12,6 +12,10 @@ gl = { path = "lib/gl" }
 render_gl_derive = { path = "render_gl_derive" }
 failure = "0.1.5"
 nalgebra = "0.18.0"
+image = "0.22.0"
+tobj = "0.1.6"
+num = "0.2.0"
+rand = "0.5.5"
 
 [build-dependencies]
 walkdir = "2.2.9"

@@ -1,6 +1,10 @@
 #[macro_use] extern crate failure;
 #[macro_use] extern crate render_gl_derive;
 extern crate nalgebra;
+extern crate image;
+extern crate rand;
+extern crate tobj;
+extern crate num;
 
 pub mod render_gl;
 pub mod resources;
@@ -103,7 +107,8 @@ impl GlutinState {
         let gl = self.gl.clone();
         let res = Resources::from_relative_exe_path(Path::new("assets"))?;
 
-        let triangle = rectangle::Rectangle::new(&res, &gl)?;
+        let rectangle1 = rectangle::Rectangle::new(&res, &gl, nalgebra::Vector2::new(-0.5, 0.0))?;
+        let rectangle2 = rectangle::Rectangle::new(&res, &gl, nalgebra::Vector2::new(0.5, 0.0))?;
 
         if let Some(mut context) = self.context.take() {
             let event_loop = context.event_loop.take().unwrap();
@@ -125,7 +130,8 @@ impl GlutinState {
                         ..
                     } => {
                         context.color_buffer.clear(&gl);
-                        triangle.render(&gl);
+                        rectangle1.render(&gl);
+                        rectangle2.render(&gl);
                         context.window.swap_buffers().unwrap();
                     },
                     Event::WindowEvent {

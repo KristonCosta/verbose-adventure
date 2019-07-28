@@ -3,18 +3,7 @@ use gl::Gl;
 use std::ffi::{CStr, CString};
 use crate::resources::Resources;
 use crate::resources;
-
-#[derive(Debug, Fail)]
-pub enum Error {
-    #[fail(display = "Failed to load resource {}", name)]
-    ResourceLoad { name: String, #[cause] inner: resources::Error },
-    #[fail(display = "Can not determine shader type for resource {}", name)]
-    CanNotDetermineShaderTypeForResource { name: String },
-    #[fail(display = "Failed to compile shader {}: {}", name, message)]
-    CompileError { name: String, message: String },
-    #[fail(display = "Failed to link program {}: {}", name, message)]
-    LinkError { name: String, message: String },
-}
+use crate::render_gl::errors::Error;
 
 pub struct Program {
     id: gl::types::GLuint,
@@ -95,6 +84,28 @@ impl Program {
     pub fn set_used(&self) {
         unsafe {
             self.gl.UseProgram(self.id);
+        }
+    }
+
+    pub fn set_bool(&self, name: &str, value: bool) {
+        let location = self.get_uniform_location(name);
+        unsafe { self.gl.Uniform1i(location, value as gl::types::GLint) }
+    }
+
+    pub fn set_int(&self, name: &str, value: i32) {
+        let location = self.get_uniform_location(name);
+        unsafe { self.gl.Uniform1i(location, value as gl::types::GLint) }
+    }
+
+    pub fn set_float(&self, name: &str, value: f32) {
+        let location = self.get_uniform_location(name);
+        unsafe { self.gl.Uniform1f(location, value as gl::types::GLfloat) }
+    }
+
+    pub fn get_uniform_location(&self, name: &str) -> i32 {
+        let name = CString::new(name).unwrap();
+        unsafe {
+            self.gl.GetUniformLocation(self.id, name.as_ptr() as *const gl::types::GLchar)
         }
     }
 }
