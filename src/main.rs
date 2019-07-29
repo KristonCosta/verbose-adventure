@@ -11,6 +11,7 @@ extern crate num;
 
 pub mod render_gl;
 pub mod resources;
+mod cube;
 mod triangle;
 mod rectangle;
 mod debug;
@@ -113,14 +114,27 @@ impl GlutinState {
     pub fn run(&mut self) -> Result<(), failure::Error>{
         let gl = self.gl.clone();
         let res = Resources::from_relative_exe_path(Path::new("assets"))?;
+        unsafe { gl.Enable(gl::DEPTH_TEST); }
 
-        let rectangle = rectangle::Rectangle::new(&res, &gl, nalgebra::Vector2::new(0.0, 0.0))?;
-
+        // let rectangle = rectangle::Rectangle::new(&res, &gl, nalgebra::Vector2::new(0.0, 0.0))?;
+        let cube_positions = vec![
+            nalgebra::Vector3::new(0.0,0.0,0.0),
+            nalgebra::Vector3::new(2.0,5.0,-15.0),
+            nalgebra::Vector3::new(-1.5,-2.2,2.5),
+            nalgebra::Vector3::new(-3.8,-2.0,-12.3),
+            nalgebra::Vector3::new(2.4,-0.4,-3.5),
+            nalgebra::Vector3::new(-1.7,3.0,-7.5),
+            nalgebra::Vector3::new(1.3,-2.0,-2.5),
+            nalgebra::Vector3::new(1.5,2.0,-2.5),
+            nalgebra::Vector3::new(1.5,0.2,-1.5),
+            nalgebra::Vector3::new(-1.3,1.0,-1.5),
+        ];
+        let cube = cube::Cube::new(&res, &gl, nalgebra::Vector3::new(0.0,0.0,0.0))?;
         // let rectangle2 = rectangle::Rectangle::new(&res, &gl, nalgebra::Vector2::new(0.5, 0.0))?;
 
         if let Some(mut context) = self.context.take() {
             let event_loop = context.event_loop.take().unwrap();
-            context.camera.set_used(&gl, &rectangle.program);
+            context.camera.set_used(&gl, &cube.program);
             let mut time = Instant::now();
             event_loop.run(move |event, _, control_flow| {
                 match event {
@@ -132,20 +146,22 @@ impl GlutinState {
                         ..
                     } => {
                         let size = context.camera.update_size(size, &context.window.window());
-                        context.camera.set_used(&gl, &rectangle.program);
+                        context.camera.set_used(&gl, &cube.program);
                         context.window.resize(size);
                     },
                     Event::WindowEvent {
                         event: WindowEvent::RedrawRequested,
                         ..
                     } => {
-                        let elapsed = time.elapsed().as_secs_f32() * 10.0;
-                        let trans = nalgebra_glm::rotation(radians(elapsed), &nalgebra_glm::vec3(0.0, 0.0, 1.0));
-                        let trans = nalgebra_glm::scale(&trans, &nalgebra_glm::vec3(0.5, 0.5, 0.5));
-
-                        rectangle.program.set_mat_4f("transform", trans);
+                        let elapsed = time.elapsed().as_secs_f32() * 1.0;
+                        let mut angle = elapsed * radians(50.0);
+                        let mut counter = 1;
                         context.color_buffer.clear(&gl);
-                        rectangle.render(&gl);
+                        for pos in &cube_positions {
+                            cube.render(&gl, angle + counter as f32, pos);
+                            counter += 1;
+                        }
+
                        // rectangle2.render(&gl);
                         context.window.swap_buffers().unwrap();
 

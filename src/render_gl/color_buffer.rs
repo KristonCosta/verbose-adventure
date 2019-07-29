@@ -27,7 +27,7 @@ impl ColorBuffer {
 
     pub fn clear(&self, gl: &gl::Gl) {
         unsafe {
-            gl.Clear(gl::COLOR_BUFFER_BIT);
+            gl.Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
         }
     }
 }
