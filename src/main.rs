@@ -1,10 +1,13 @@
+#![feature(duration_float)]
 #[macro_use] extern crate failure;
 #[macro_use] extern crate render_gl_derive;
 extern crate nalgebra;
+extern crate nalgebra_glm;
 extern crate image;
 extern crate rand;
 extern crate tobj;
 extern crate num;
+
 
 pub mod render_gl;
 pub mod resources;
@@ -31,6 +34,11 @@ use crate::render_gl::buffer::{ArrayBuffer, VertexArray};
 use crate::debug::failure_to_string;
 use crate::render_gl::viewport::Viewport;
 use crate::render_gl::color_buffer::ColorBuffer;
+use nalgebra::Matrix4;
+use std::time::Instant;
+use nalgebra_glm::RealField;
+use crate::render_gl::math::radians;
+use crate::render_gl::camera::Camera;
 
 pub const WINDOW_NAME: &str = "Hello Glutin";
 
@@ -44,7 +52,7 @@ pub fn main() {
 pub struct RenderContext {
     pub event_loop: Option<EventLoop<()>>,
     pub window: ContextWrapper<PossiblyCurrent, Window>,
-    pub viewport: Viewport,
+    pub camera: Camera,
     pub color_buffer: ColorBuffer,
 }
 
@@ -81,15 +89,14 @@ impl GlutinState {
         let context = windowed_context.context();
         let _gl = gl::Gl::load_with(|ptr| context.get_proc_address(ptr) as *const _);
 
-        let mut viewport = Viewport::for_window(size, &windowed_context.window());
-        viewport.set_used(&_gl);
+        let mut camera = Camera::new(size, &windowed_context.window());
 
         let color_buffer = ColorBuffer::from_color(nalgebra::Vector3::new(0.3,0.3,0.5));
         color_buffer.set_used(&_gl);
 
 
         let render_context = RenderContext {
-            viewport,
+            camera,
             event_loop: Some(event_loop),
             window: windowed_context,
             color_buffer,
@@ -107,32 +114,41 @@ impl GlutinState {
         let gl = self.gl.clone();
         let res = Resources::from_relative_exe_path(Path::new("assets"))?;
 
-        let rectangle1 = rectangle::Rectangle::new(&res, &gl, nalgebra::Vector2::new(-0.5, 0.0))?;
-        let rectangle2 = rectangle::Rectangle::new(&res, &gl, nalgebra::Vector2::new(0.5, 0.0))?;
+        let rectangle = rectangle::Rectangle::new(&res, &gl, nalgebra::Vector2::new(0.0, 0.0))?;
+
+        // let rectangle2 = rectangle::Rectangle::new(&res, &gl, nalgebra::Vector2::new(0.5, 0.0))?;
 
         if let Some(mut context) = self.context.take() {
             let event_loop = context.event_loop.take().unwrap();
+            context.camera.set_used(&gl, &rectangle.program);
+            let mut time = Instant::now();
             event_loop.run(move |event, _, control_flow| {
                 match event {
                     Event::EventsCleared => {
-                        // window.request_redraw();
+                        context.window.window().request_redraw();
                     },
                     Event::WindowEvent {
                         event: WindowEvent::Resized(size),
                         ..
                     } => {
-                        let size = context.viewport.update_size(size, &context.window.window());
-                        context.viewport.set_used(&gl);
+                        let size = context.camera.update_size(size, &context.window.window());
+                        context.camera.set_used(&gl, &rectangle.program);
                         context.window.resize(size);
                     },
                     Event::WindowEvent {
                         event: WindowEvent::RedrawRequested,
                         ..
                     } => {
+                        let elapsed = time.elapsed().as_secs_f32() * 10.0;
+                        let trans = nalgebra_glm::rotation(radians(elapsed), &nalgebra_glm::vec3(0.0, 0.0, 1.0));
+                        let trans = nalgebra_glm::scale(&trans, &nalgebra_glm::vec3(0.5, 0.5, 0.5));
+
+                        rectangle.program.set_mat_4f("transform", trans);
                         context.color_buffer.clear(&gl);
-                        rectangle1.render(&gl);
-                        rectangle2.render(&gl);
+                        rectangle.render(&gl);
+                       // rectangle2.render(&gl);
                         context.window.swap_buffers().unwrap();
+
                     },
                     Event::WindowEvent {
                         event: WindowEvent::CloseRequested,
@@ -149,3 +165,4 @@ impl GlutinState {
         Ok(())
     }
 }
+

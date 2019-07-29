@@ -102,6 +102,11 @@ impl Program {
         unsafe { self.gl.Uniform1f(location, value as gl::types::GLfloat) }
     }
 
+    pub fn set_mat_4f(&self, name: &str, value: nalgebra_glm::Mat4) {
+        let location = self.get_uniform_location(name);
+        unsafe { self.gl.UniformMatrix4fv(location, 1, gl::FALSE, value.as_ptr() as *const gl::types::GLfloat)}
+    }
+
     pub fn get_uniform_location(&self, name: &str) -> i32 {
         let name = CString::new(name).unwrap();
         unsafe {

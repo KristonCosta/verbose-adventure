@@ -3,6 +3,8 @@ use crate::render_gl::{buffer, data};
 use crate::resources::Resources;
 use crate::render_gl::buffer::{ArrayBuffer, VertexArray, ElementArrayBuffer};
 use crate::render_gl::texture::Texture;
+use nalgebra_glm::{TVec, TVec1, RealField};
+use crate::render_gl::math::radians;
 
 #[derive(VertexAttribPointers)]
 #[derive(Copy, Clone, Debug)]
@@ -17,7 +19,7 @@ struct Vertex {
 }
 
 pub struct Rectangle {
-    program: render_gl::Program,
+    pub program: render_gl::Program,
     texture: Texture,
     face: Texture,
     _vbo: buffer::ElementArrayBuffer,
@@ -27,7 +29,7 @@ pub struct Rectangle {
 impl Rectangle {
     pub fn new(res: &Resources, gl: &gl::Gl, offset: nalgebra::Vector2<f32>) -> Result<Self, failure::Error> {
         let shader_program = render_gl::Program::from_res(
-            &gl, &res, "shaders/textured"
+            &gl, &res, "shaders/transform"
         )?;
 
         let texture = Texture::from_res(gl, res, "texture/container.jpg", gl::RGB)?;
@@ -72,10 +74,13 @@ impl Rectangle {
         })
     }
 
+
+
     pub fn render(&self, gl: &gl::Gl) {
         self.program.set_used();
         self.program.set_int("texture1", 0);
         self.program.set_int("texture2", 1);
+
         unsafe {
             gl.ActiveTexture(gl::TEXTURE0);
             self.texture.bind();

@@ -31,6 +31,10 @@ impl Viewport {
             gl.Viewport(self.x, self.y, self.w, self.h);
         }
     }
+
+    pub fn aspect_ratio(&self) -> f32 {
+        (self.w as f32) / (self.h as f32)
+    }
 }
 
 fn get_physical_size(size: LogicalSize, window: &Window) -> PhysicalSize {
