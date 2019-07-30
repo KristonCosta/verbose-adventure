@@ -8,7 +8,7 @@ extern crate rand;
 extern crate tobj;
 extern crate num;
 
-
+use num::Float;
 pub mod render_gl;
 pub mod resources;
 mod cube;
@@ -25,7 +25,7 @@ use glutin::{
     CreationError,
     dpi::LogicalSize,
     window::{Window, WindowBuilder},
-    event::{Event, WindowEvent},
+    event::{Event, WindowEvent, DeviceEvent, KeyboardInput, VirtualKeyCode, ElementState},
     event_loop::{EventLoop, ControlFlow},
     GlRequest,
     Api};
@@ -37,9 +37,11 @@ use crate::render_gl::viewport::Viewport;
 use crate::render_gl::color_buffer::ColorBuffer;
 use nalgebra::Matrix4;
 use std::time::Instant;
-use nalgebra_glm::RealField;
+use nalgebra_glm::{RealField, Vec3, U3};
 use crate::render_gl::math::radians;
 use crate::render_gl::camera::Camera;
+use failure::_core::time::Duration;
+use std::collections::HashMap;
 
 pub const WINDOW_NAME: &str = "Hello Glutin";
 
@@ -83,15 +85,19 @@ impl GlutinState {
 
         let windowed_context = ContextBuilder::new()
             .with_gl(GlRequest::Specific(Api::OpenGl, (4, 1)))
+            .with_vsync(true)
             .build_windowed(output, &event_loop).unwrap();
 
         let windowed_context = unsafe { windowed_context.make_current().expect("Could not make windowed context current") };
 
         let context = windowed_context.context();
+
         let _gl = gl::Gl::load_with(|ptr| context.get_proc_address(ptr) as *const _);
 
-        let mut camera = Camera::new(size, &windowed_context.window());
+        let mut camera = Camera::new(size, Vec3::new(0.0, 0.0, 3.0), Vec3::new(0.0, 0.0, 0.0), &windowed_context.window());
 
+        let window: &Window = windowed_context.window();
+        window.set_cursor_grab(true);
         let color_buffer = ColorBuffer::from_color(nalgebra::Vector3::new(0.3,0.3,0.5));
         color_buffer.set_used(&_gl);
 
@@ -130,13 +136,27 @@ impl GlutinState {
             nalgebra::Vector3::new(-1.3,1.0,-1.5),
         ];
         let cube = cube::Cube::new(&res, &gl, nalgebra::Vector3::new(0.0,0.0,0.0))?;
-        // let rectangle2 = rectangle::Rectangle::new(&res, &gl, nalgebra::Vector2::new(0.5, 0.0))?;
 
         if let Some(mut context) = self.context.take() {
             let event_loop = context.event_loop.take().unwrap();
             context.camera.set_used(&gl, &cube.program);
             let mut time = Instant::now();
+            let mut last_frame = Instant::now();
+            let mut input_fps = Instant::now();
+            let mut render_fps = Instant::now();
+            let mut camera_fps = Instant::now();
+            context.window.window().request_redraw();
+            let mut input_map: HashMap<VirtualKeyCode, bool> = [
+                (VirtualKeyCode::A, false),
+                (VirtualKeyCode::D, false),
+                (VirtualKeyCode::W, false),
+                (VirtualKeyCode::S, false),
+            ].iter().cloned().collect();
+
             event_loop.run(move |event, _, control_flow| {
+                let now = Instant::now();
+                let dt = ((now - last_frame).as_micros() as f64 / 1_000_000.0);
+                last_frame = now;
                 match event {
                     Event::EventsCleared => {
                         context.window.window().request_redraw();
@@ -153,16 +173,22 @@ impl GlutinState {
                         event: WindowEvent::RedrawRequested,
                         ..
                     } => {
+                        let now = Instant::now();
+                        let dt = ((now - render_fps).as_micros() as f64 / 1_000_000.0);
+                        render_fps = now;
+                        println!("Render fps: {}", 1.0 / dt);
                         let elapsed = time.elapsed().as_secs_f32() * 1.0;
+
                         let mut angle = elapsed * radians(50.0);
                         let mut counter = 1;
+                        let camera_position = Vec3::new(elapsed.sin() * 10.0, 0.0, elapsed.cos() * 10.0);
+                        context.camera.set_used(&gl, &cube.program);
+                        // context.camera.reset_mouse_position(&context.window.window());
                         context.color_buffer.clear(&gl);
                         for pos in &cube_positions {
                             cube.render(&gl, angle + counter as f32, pos);
                             counter += 1;
                         }
-
-                       // rectangle2.render(&gl);
                         context.window.swap_buffers().unwrap();
 
                     },
@@ -173,7 +199,58 @@ impl GlutinState {
                         println!("The close button was pressed; closing");
                         *control_flow = ControlFlow::Exit
                     },
+
+                    Event::DeviceEvent {
+                        event: DeviceEvent::MouseMotion {
+                            delta: (x, y),
+                        },
+                        ..
+                    } => {
+                        let now = Instant::now();
+                        let dt = ((now - camera_fps).as_micros() as f64 / 1_000_000.0);
+                        camera_fps = now;
+                        println!("Camera fps: {}", 1.0 / dt);
+                        context.camera.turn(x as f32 * 0.05, y as f32 * 0.05);
+                    },
+                    Event::WindowEvent {
+                        event: WindowEvent::KeyboardInput {
+                            input: KeyboardInput {
+                                virtual_keycode: Some(key),
+                                state,
+                                ..
+                            },
+                            ..
+                        },
+                        ..
+                    } => {
+                        if key == VirtualKeyCode::Escape {
+                            *control_flow = ControlFlow::Exit
+                        }
+                        match state {
+                            ElementState::Pressed => {input_map.insert(key, true);},
+                            ElementState::Released => {input_map.insert(key, false);},
+                        }
+                    }
                     _ => *control_flow = ControlFlow::Poll,
+                }
+
+                let front = context.camera.front();
+                let up = context.camera.up();
+                let speed = 1.0 * dt as f32;// * dt as f32;
+
+
+                let norm_cross = front.cross(&up).normalize() * speed;
+                if input_map.contains_key(&VirtualKeyCode::W) && input_map[&VirtualKeyCode::W] {
+                    context.camera.translate_position((front * speed));
+                }
+                if input_map.contains_key(&VirtualKeyCode::A) && input_map[&VirtualKeyCode::A] {
+                    context.camera.translate_position((norm_cross) * -1 as f32);
+                }
+                if input_map.contains_key(&VirtualKeyCode::S) && input_map[&VirtualKeyCode::S] {
+                    context.camera.translate_position((front * speed * -1 as f32));
+                }
+                if input_map.contains_key(&VirtualKeyCode::D) && input_map[&VirtualKeyCode::D] {
+                    context.camera.translate_position((norm_cross));
                 }
             });
         }
