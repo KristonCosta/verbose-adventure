@@ -13,6 +13,7 @@ pub struct Camera {
     target: Vec3,
     pitch: f32,
     yaw: f32,
+    fov: f32,
     pub size: LogicalSize,
 }
 
@@ -26,6 +27,7 @@ impl Camera {
             target,
             pitch: 0.0,
             yaw: -90.0,
+            fov: 55.0,
         }
     }
 
@@ -73,7 +75,7 @@ impl Camera {
         self.viewport.set_used(gl);
 
         let view = self.look_at();
-        let projection =  nalgebra_glm::perspective(radians(55.0), self.viewport.aspect_ratio(), 0.1, 100.0);
+        let projection =  nalgebra_glm::perspective(radians(self.fov), self.viewport.aspect_ratio(), 0.1, 100.0);
 
         program.set_mat_4f("view", view);
         program.set_mat_4f("projection", projection);
@@ -87,8 +89,13 @@ impl Camera {
         window.set_cursor_position((self.size.width / 2.0, self.size.height/ 2.0).into()).unwrap();
     }
 
+    pub fn zoom(&mut self, dy: f32) {
+        println!("Zoom: {}", dy);
+        self.fov = clamp(self.fov + dy * -1.0, 1.0, 80.0);
+    }
+
     pub fn turn(&mut self, dx:f32, dy:f32) {
         self.yaw += dx;
-        self.pitch += clamp(dy * -1.0, -90.0, 90.0);
+        self.pitch = clamp(self.pitch + dy * -1.0, -90.0, 90.0);
     }
 }

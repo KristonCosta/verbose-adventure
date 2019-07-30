@@ -25,7 +25,7 @@ use glutin::{
     CreationError,
     dpi::LogicalSize,
     window::{Window, WindowBuilder},
-    event::{Event, WindowEvent, DeviceEvent, KeyboardInput, VirtualKeyCode, ElementState},
+    event::{Event, WindowEvent, DeviceEvent, KeyboardInput, VirtualKeyCode, ElementState, MouseScrollDelta},
     event_loop::{EventLoop, ControlFlow},
     GlRequest,
     Api};
@@ -173,12 +173,7 @@ impl GlutinState {
                         event: WindowEvent::RedrawRequested,
                         ..
                     } => {
-                        let now = Instant::now();
-                        let dt = ((now - render_fps).as_micros() as f64 / 1_000_000.0);
-                        render_fps = now;
-                        println!("Render fps: {}", 1.0 / dt);
                         let elapsed = time.elapsed().as_secs_f32() * 1.0;
-
                         let mut angle = elapsed * radians(50.0);
                         let mut counter = 1;
                         let camera_position = Vec3::new(elapsed.sin() * 10.0, 0.0, elapsed.cos() * 10.0);
@@ -206,11 +201,25 @@ impl GlutinState {
                         },
                         ..
                     } => {
-                        let now = Instant::now();
-                        let dt = ((now - camera_fps).as_micros() as f64 / 1_000_000.0);
-                        camera_fps = now;
-                        println!("Camera fps: {}", 1.0 / dt);
                         context.camera.turn(x as f32 * 0.05, y as f32 * 0.05);
+                    },
+                    Event::WindowEvent {
+                        event: WindowEvent::MouseWheel {
+                            delta,
+                            ..
+                        },
+                        ..
+                    } => {
+                        let scroll =  match delta {
+                            MouseScrollDelta::LineDelta(_, y) => {
+                                y
+                            },
+                            MouseScrollDelta::PixelDelta(pos) => {
+                                pos.y as f32
+                            },
+                        };
+                        println!("Zoom: {}", scroll);
+                        context.camera.zoom(scroll);
                     },
                     Event::WindowEvent {
                         event: WindowEvent::KeyboardInput {
@@ -251,6 +260,12 @@ impl GlutinState {
                 }
                 if input_map.contains_key(&VirtualKeyCode::D) && input_map[&VirtualKeyCode::D] {
                     context.camera.translate_position((norm_cross));
+                }
+                if input_map.contains_key(&VirtualKeyCode::Z) && input_map[&VirtualKeyCode::Z] {
+                    context.camera.zoom(0.5);
+                }
+                if input_map.contains_key(&VirtualKeyCode::X) && input_map[&VirtualKeyCode::X] {
+                    context.camera.zoom(-0.5);
                 }
             });
         }
