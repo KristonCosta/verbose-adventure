@@ -11,6 +11,16 @@ pub struct Texture {
 
 impl Texture {
     pub fn from_res(gl: &Gl, res: &Resources, name: &str, rgb_type: gl::types::GLenum) -> Result<Self, Error> {
+        let img = res.load_image(name).map_err(|err| {
+            Error::ResourceLoad {
+                inner: err,
+                name: name.into(),
+            }
+        })?;
+        Texture::from_img(gl, img, rgb_type)
+    }
+
+    pub fn from_img(gl: &Gl, img: DynamicImage, rgb_type: gl::types::GLenum) -> Result<Self, Error> {
         let mut texture = 0;
         unsafe {
             gl.GenTextures(1, &mut texture);
@@ -22,12 +32,6 @@ impl Texture {
             gl.TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MIN_FILTER, gl::NEAREST as i32);
             gl.TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, gl::LINEAR as i32);
         }
-        let img = res.load_image(name).map_err(|err| {
-            Error::ResourceLoad {
-                inner: err,
-                name: name.into(),
-            }
-        })?;
 
         let img = img.flipv();
 

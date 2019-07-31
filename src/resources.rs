@@ -43,13 +43,7 @@ impl Resources {
     }
 
     pub fn load_cstring(&self, resource_name: &str) -> Result<ffi::CString, Error> {
-        let mut file = fs::File::open(
-            resource_name_to_path(&self.root_path, resource_name)
-        )?;
-        let mut buffer: Vec<u8> = Vec::with_capacity(
-            file.metadata()?.len() as usize + 1
-        );
-        file.read_to_end(&mut buffer)?;
+        let buffer = self.load_bytes_from_file(resource_name)?;
         if buffer.iter().any(|i| *i == 0) {
             return Err(Error::FileContainsNil);
         }
@@ -60,6 +54,17 @@ impl Resources {
         Ok(image::open(
             resource_name_to_path(&self.root_path, resource_name))?)
     }
+
+    pub fn load_bytes_from_file(&self, resource_name: &str) -> Result<Vec<u8>, Error> {
+        let mut file = fs::File::open(
+            resource_name_to_path(&self.root_path, resource_name)
+        )?;
+        let mut buffer: Vec<u8> = Vec::with_capacity(
+            file.metadata()?.len() as usize + 1
+        );
+        file.read_to_end(&mut buffer)?;
+        Ok(buffer)
+    }
 }
 
 fn resource_name_to_path(root_dir: &Path, location: &str) -> PathBuf {
@@ -69,3 +74,4 @@ fn resource_name_to_path(root_dir: &Path, location: &str) -> PathBuf {
     }
     path
 }
+

@@ -1,13 +1,57 @@
+use gl::Gl;
+use std::time::Instant;
+use std::collections::HashMap;
+use crate::game::Game;
+use nalgebra_glm::{RealField, Vec3, U3};
 
-pub struct RenderContext {
+use glutin::{
+    ContextBuilder,
+    ContextWrapper,
+    PossiblyCurrent,
+    CreationError,
+    dpi::LogicalSize,
+    window::{Window, WindowBuilder},
+    event::{Event, WindowEvent, DeviceEvent, KeyboardInput, VirtualKeyCode, ElementState, MouseScrollDelta},
+    event_loop::{EventLoop, ControlFlow},
+    GlRequest,
+    Api};
+use crate::game_handler::InputEvent::{KeyPressed, KeyReleased, MouseMoved};
+use failure::_core::time::Duration;
+
+pub const WINDOW_NAME: &str = "Hello Glutin";
+
+pub struct GameContext {
     pub gl: Gl,
     pub window: ContextWrapper<PossiblyCurrent, Window>,
+    start_time: Instant,
+}
+
+impl GameContext {
+    pub fn dt(&self, time: Instant) -> f32 {
+        (self.start_time - time).as_secs_f32()
+    }
+
+    pub fn elapsed(&self) -> Duration {
+        self.start_time.elapsed()
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum InputEvent {
+    KeyPressed(InputEventData<VirtualKeyCode>),
+    KeyReleased(InputEventData<VirtualKeyCode>),
+    MouseMoved(f32, f32),
+}
+#[derive(Debug, Clone, Copy)]
+pub struct InputEventData<T> {
+    pub data: T,
+    pub dt: f64,
 }
 
 pub struct GameHandler {
-    context: Option<RenderContext>,
+    context: Option<GameContext>,
     event_loop: Option<EventLoop<()>>,
-
+    size: LogicalSize,
 }
 
 impl Default for GameHandler {
@@ -41,32 +85,35 @@ impl GameHandler {
         let _gl = gl::Gl::load_with(|ptr| context.get_proc_address(ptr) as *const _);
         unsafe { _gl.Enable(gl::DEPTH_TEST); }
 
-        let render_context = RenderContext {
+        let game_context = GameContext {
             gl: _gl,
             window: windowed_context,
+            start_time: Instant::now(),
         };
 
         Ok(GameHandler {
-            context: Some(render_context),
+            context: Some(game_context),
             event_loop: Some(event_loop),
-
+            size,
         })
     }
 
 
 
-    pub fn run(&mut self) -> Result<(), failure::Error>{
+    pub fn run<G: Game + 'static>(&mut self) -> Result<(), failure::Error>{
 
         let mut time = Instant::now();
         let mut last_frame = Instant::now();
-        let mut input_map: HashMap<VirtualKeyCode, bool> = [].iter().cloned().collect();
+
         let context = self.context.take().unwrap();
         let gl = context.gl.clone();
         let event_loop = self.event_loop.take().unwrap();
+        let mut game = G::new(&context, self.size);
         event_loop.run(move |event, _, control_flow| {
             let now = Instant::now();
             let dt = ((now - last_frame).as_micros() as f64 / 1_000_000.0);
             last_frame = now;
+            let mut pending_input = None;
             match event {
                 Event::EventsCleared => {
                     context.window.window().request_redraw();
@@ -83,6 +130,7 @@ impl GameHandler {
                     event: WindowEvent::RedrawRequested,
                     ..
                 } => {
+                    game.render(&context);
                     context.window.swap_buffers().unwrap();
 
                 },
@@ -101,6 +149,9 @@ impl GameHandler {
                     ..
                 } => {
                     // context.camera.turn(x as f32 * 0.05, y as f32 * 0.05);
+                    pending_input = Some(
+                        MouseMoved(x as f32, y as f32)
+                    );
                 },
                 Event::WindowEvent {
                     event: WindowEvent::MouseWheel {
@@ -134,12 +185,26 @@ impl GameHandler {
                         *control_flow = ControlFlow::Exit
                     }
                     match state {
-                        ElementState::Pressed => {input_map.insert(key, true);},
-                        ElementState::Released => {input_map.insert(key, false);},
+                        ElementState::Pressed => {pending_input = Some(KeyPressed(
+                            InputEventData{
+                                data: key,
+                                dt,
+                            })
+                        ); },
+                        ElementState::Released => {pending_input = Some(KeyReleased(
+                            InputEventData{
+                                data: key,
+                                dt,
+                            })
+                        );},
                     }
                 }
                 _ => *control_flow = ControlFlow::Poll,
             }
+            if let Some(input_event) = pending_input {
+                game.process_input(input_event, &context);
+            }
+            game.update(dt as f32, &context);
         });
 
         Ok(())
