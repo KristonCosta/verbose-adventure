@@ -15,6 +15,7 @@ use num::Float;
 use std::collections::HashMap;
 use font_renderer::load_bitmap;
 use crate::glyph::Glyph;
+use crate::console::Console;
 
 pub trait Game {
     fn new(context: &GameContext, size: LogicalSize) -> Self;
@@ -27,16 +28,14 @@ pub struct GameImpl {
     color_buffer: ColorBuffer,
     camera: Camera,
     cube: Cube,
-    glyph: Glyph,
+    console: Console,
     keyboard: HashMap<VirtualKeyCode, bool>,
 }
 
 impl Game for GameImpl  {
     fn new(context: &GameContext, size: LogicalSize) -> Self {
         let window: &Window = context.window.window();
-     //   window.set_cursor_grab(true);
         let res = Resources::from_relative_exe_path(Path::new("assets")).unwrap();
-
 
         let physical_size = size.to_physical(window.hidpi_factor());
         context.window.resize(physical_size);
@@ -46,47 +45,34 @@ impl Game for GameImpl  {
 
         let camera = Camera::new(size, Vec3::new(0.0, 0.0, 3.0), Vec3::new(0.0, 0.0, 0.0), &window);
         let cube = Cube::new(&res, &context.gl, nalgebra::Vector3::new(0.0,0.0,0.0)).unwrap();
-        let glyph = Glyph::new(&res, &context.gl,nalgebra::Vector3::new(0.0,0.0,0.0), 'p' ).unwrap();
+        // let glyph = Glyph::new(&res, &context.gl,nalgebra::Vector3::new(0.0,0.0,0.0), 'p' ).unwrap();
+        let mut console = Console::new(&res, &context.gl,(50, 30), size.clone()).unwrap();
         let mut input_map: HashMap<VirtualKeyCode, bool> = [].iter().cloned().collect();
+
+        let mut index = 0;
+        for ch in "abcdefghijklmnopqrstuvwxyz".chars() {
+            console.put_char(ch, index, 0);
+            index += 1;
+        }
+
+        console.put_char('b', 3, 4);
+        console.put_char('c', 6, 4);
+        console.put_char('?', 8, 8);
+        console.put_char('<', 1, 9);
 
         GameImpl {
             color_buffer,
             camera,
             cube,
-            glyph,
+            console,
             keyboard:input_map,
         }
     }
 
     fn render(&self, context: &GameContext) {
         let gl = &context.gl;
-        /*
-        let cube_positions = vec![
-            nalgebra::Vector3::new(0.0,0.0,0.0),
-            nalgebra::Vector3::new(2.0,5.0,-15.0),
-            nalgebra::Vector3::new(-1.5,-2.2,2.5),
-            nalgebra::Vector3::new(-3.8,-2.0,-12.3),
-            nalgebra::Vector3::new(2.4,-0.4,-3.5),
-            nalgebra::Vector3::new(-1.7,3.0,-7.5),
-            nalgebra::Vector3::new(1.3,-2.0,-2.5),
-            nalgebra::Vector3::new(1.5,2.0,-2.5),
-            nalgebra::Vector3::new(1.5,0.2,-1.5),
-            nalgebra::Vector3::new(-1.3,1.0,-1.5),
-        ];
-        let elapsed = context.elapsed().as_secs_f32();
-
-        let mut angle = (50.0.to_radians() * elapsed) as f32;
-        let mut counter = 1;
-        let camera_position = Vec3::new(elapsed.sin() * 10.0, 0.0, elapsed.cos() * 10.0);
-        self.camera.set_used(&gl, &self.cube.program);
         self.color_buffer.clear(&gl);
-        for pos in &cube_positions {
-            self.cube.render(&gl, counter as f32 + angle, pos);
-            counter += 1;
-        }
-        */
-        self.color_buffer.clear(&gl);
-        self.glyph.render(&gl);
+        self.console.render(&gl);
     }
 
     fn update(&mut self, dt: f32, context: &GameContext) {

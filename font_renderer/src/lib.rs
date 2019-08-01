@@ -16,9 +16,16 @@ fn s_d(x: i32, y: i32) -> f32 {
 
 impl BoundingBox {
 
+    pub fn width(&self) -> u32 {
+        (self.x2 - self.x1) as u32
+    }
+
+    pub fn height(&self) -> u32 {
+        (self.y2 - self.y1) as u32
+    }
+
     pub fn top_left(&self, scale: (i32, i32)) -> (f32, f32) {
         (s_d(self.x1, scale.0), s_d(self.y2, scale.1))
-
     }
 
     pub fn top_right(&self, scale: (i32, i32)) -> (f32, f32) {
@@ -34,7 +41,7 @@ impl BoundingBox {
     }
 }
 
-pub fn load_bitmap(data: Vec<u8>) -> (DynamicImage, HashMap<char, BoundingBox>) {
+pub fn load_bitmap(data: Vec<u8>) -> (DynamicImage, HashMap<char, BoundingBox>, (u32, u32)) {
     let font = Font::from_bytes(data).unwrap();
     let height = 100.0;
     let scale = Scale::uniform(height);
@@ -86,7 +93,7 @@ pub fn load_bitmap(data: Vec<u8>) -> (DynamicImage, HashMap<char, BoundingBox>) 
                     )
                 }
             });
-            
+
             map.insert(text.chars().nth(counter).unwrap(), BoundingBox{
                 x1: bounding_box.min.x,
                 x2: bounding_box.max.x,
@@ -97,5 +104,5 @@ pub fn load_bitmap(data: Vec<u8>) -> (DynamicImage, HashMap<char, BoundingBox>) 
         counter += 1;
     }
 
-    (DynamicImage::ImageRgba8(image), map)
+    (DynamicImage::ImageRgba8(image), map, (glyphs_width, glyphs_height))
 }
