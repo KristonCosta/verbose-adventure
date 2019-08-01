@@ -67,14 +67,14 @@ pub fn load_bitmap(data: Vec<u8>) -> (DynamicImage, HashMap<char, BoundingBox>, 
         (max_x - min_x) as u32
     };
 
-    let mut image: RgbaImage = DynamicImage::new_rgba8(glyphs_width + 100, glyphs_height).to_rgba();
+    let mut image: RgbaImage = DynamicImage::new_rgba8(glyphs_width + height as u32, glyphs_height).to_rgba();
 
     for x in 0..image.width() {
         for y in 0..image.height() {
             image.put_pixel(
                 x,
                 y,
-                Rgba([0, 0, 0, 255]),
+                Rgba([255, 255, 255, 0]),
             )
         }
     }
@@ -103,6 +103,13 @@ pub fn load_bitmap(data: Vec<u8>) -> (DynamicImage, HashMap<char, BoundingBox>, 
         }
         counter += 1;
     }
+
+    map.insert(' ', BoundingBox{
+        x1: glyphs_width as i32,
+        x2: glyphs_width as i32 + 1,
+        y1: 0,
+        y2: 1,
+    });
 
     (DynamicImage::ImageRgba8(image), map, (glyphs_width, glyphs_height))
 }

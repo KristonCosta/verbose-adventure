@@ -37,7 +37,7 @@ impl Texture {
         unsafe {
             gl.TexImage2D(gl::TEXTURE_2D,
                           0,
-                          gl::RGB as i32,
+                          gl::RGBA as i32,
                           img.width() as i32,
                           img.height() as i32,
                           0,
