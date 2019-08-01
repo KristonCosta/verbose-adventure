@@ -28,7 +28,7 @@ pub struct Console {
     texture_scale: (i32, i32),
     dimensions: (u32, u32),
     screen_size: LogicalSize,
-    default_background: data::f32_f32_f32,
+    default_background: data::f32_f32_f32_f32,
 }
 
 struct Num(i32);
@@ -48,7 +48,7 @@ impl Dirty {
 }
 
 impl Console {
-    pub fn new(res: &Resources, gl: &gl::Gl, size: (u32, u32), screen_size: LogicalSize, background: data::f32_f32_f32) -> Result<Self, failure::Error> {
+    pub fn new(res: &Resources, gl: &gl::Gl, size: (u32, u32), screen_size: LogicalSize, background: data::f32_f32_f32_f32) -> Result<Self, failure::Error> {
         let shader_program = render_gl::Program::from_res(
             &gl, &res, "shaders/glyph",
         )?;
@@ -86,7 +86,7 @@ impl Console {
         self.is_dirty.borrow_mut().set(true);
     }
 
-    pub fn put_char(&mut self, c: char, x: i32, y: i32, background: Option<data::f32_f32_f32>) {
+    pub fn put_char(&mut self, c: char, x: i32, y: i32, foreground: data::f32_f32_f32_f32, background: Option<data::f32_f32_f32_f32>) {
         if x < 0 || y < 0 {
             return
         }
@@ -95,7 +95,7 @@ impl Console {
             None => self.default_background.clone()
         };
         self.is_dirty.borrow_mut().set(true);
-        self.glyphs.insert(self.coordinates_to_index(x as u32, y as u32), Glyph::new(c, background));
+        self.glyphs.insert(self.coordinates_to_index(x as u32, y as u32), Glyph::new(c, background, foreground));
     }
 
     fn coordinates_to_index(&self, x: u32, y: u32) -> u32 {
@@ -115,7 +115,10 @@ impl Console {
     }
 
     fn load_gl(&self, gl: &gl::Gl) -> i32 {
-
+        unsafe {
+            gl.Enable(gl::BLEND);
+            gl.BlendFunc(gl::SRC_ALPHA, gl::DST_COLOR);
+        }
         // TODO: Get vertices
         let mut vertices: Vec<Vertex> = vec![];
         let mut indices: Vec<gl::types::GLuint> = vec![];
@@ -130,15 +133,19 @@ impl Console {
             vertices.append(&mut vec![
                 Vertex { position: (scaled_bounding_box.0 + coordinates.0, scaled_bounding_box.1 + coordinates.1, 0.0).into(),
                     texture: bounding_box.top_right(self.texture_scale).into(),
+                    foreground: glyph.foreground,
                     background: glyph.background},
                 Vertex { position: (scaled_bounding_box.0 + coordinates.0, coordinates.1, 0.0).into(),
                     texture: bounding_box.bottom_right(self.texture_scale).into(),
+                    foreground: glyph.foreground,
                     background: glyph.background },
                 Vertex { position: (coordinates.0, coordinates.1, 0.0).into(),
                     texture: bounding_box.bottom_left(self.texture_scale).into(),
+                    foreground: glyph.foreground,
                     background: glyph.background },
                 Vertex { position: (coordinates.0, scaled_bounding_box.1 + coordinates.1, 0.0).into(),
                     texture: bounding_box.top_left(self.texture_scale).into(),
+                    foreground: glyph.foreground,
                     background: glyph.background },
             ]);
             indices.append(&mut vec![

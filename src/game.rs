@@ -54,11 +54,11 @@ impl Game for GameImpl  {
 
         let camera = Camera::new(size, Vec3::new(0.0, 0.0, 3.0), Vec3::new(0.0, 0.0, 0.0), &window);
         let map_size = (80, 50);
-        let mut console = Console::new(&res, &context.gl,map_size, size.clone(), data::f32_f32_f32::new(255.0, 255.0, 255.0)).unwrap();
+        let mut console = Console::new(&res, &context.gl,map_size, size.clone(), data::f32_f32_f32_f32::new(255.0, 255.0, 255.0, 1.0)).unwrap();
         let mut input_map: HashMap<VirtualKeyCode, bool> = [].iter().cloned().collect();
 
         let (map, player_pos) = make_map(map_size.0 as usize, map_size.1 as usize, 15, 5, 20);
-        let color_dark_ground: data::f32_f32_f32 = Color::new(50.0,50.0, 150.0);
+        let color_dark_ground: Color = Color::new(50.0,50.0, 150.0, 1.0);
         let player = Object::new(player_pos, '@', color_dark_ground);
         GameImpl {
             color_buffer,
@@ -73,9 +73,10 @@ impl Game for GameImpl  {
 
     fn render(&mut self, context: &GameContext) {
         let gl = &context.gl;
-        let color_dark_wall: data::f32_f32_f32 = Color::from_int(0, 0, 100);
-        let color_dark_ground: data::f32_f32_f32 = Color::from_int(50, 50, 150);
-
+        let color_dark_wall: Color = Color::from_int(0, 0, 100, 1.0);
+        let color_dark_ground: Color = Color::from_int(50, 50, 150, 1.0);
+        let clear: Color = Color::from_int(0, 0, 0, 0.0);
+        let white: Color = Color::from_int(200, 200,200,1.0);
         self.color_buffer.clear(&gl);
         self.console.clear();
         for x in 0..self.map.len() {
@@ -83,16 +84,16 @@ impl Game for GameImpl  {
                 if !(self.map[x][y].block_sight) {
                     self.console.put_char(
                         ' ',
-                        x as i32, y as i32, Some(color_dark_ground));
+                        x as i32, y as i32, clear, Some(color_dark_ground));
 
                 } else {
                     self.console.put_char(
                         ' ',
-                        x as i32, y as i32, Some(color_dark_wall))
+                        x as i32, y as i32, clear, Some(color_dark_wall))
                 }
             }
         }
-        self.console.put_char('@', self.player.position.0, self.player.position.1, Some(color_dark_wall));
+        self.console.put_char('@', self.player.position.0, self.player.position.1, white, Some(clear));
         self.console.render(&gl);
     }
 

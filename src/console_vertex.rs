@@ -9,5 +9,7 @@ pub struct Vertex {
     #[location = 1]
     pub texture: data::f32_f32,
     #[location = 2]
-    pub background: data::f32_f32_f32,
+    pub background: data::f32_f32_f32_f32,
+    #[location = 3]
+    pub foreground: data::f32_f32_f32_f32,
 }
