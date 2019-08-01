@@ -18,6 +18,7 @@ mod debug;
 mod game;
 mod glyph;
 mod game_handler;
+mod console;
 
 use gl::Gl;
 use render_gl::{data, color_buffer};

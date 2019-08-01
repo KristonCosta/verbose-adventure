@@ -14,6 +14,7 @@ use std::path::Path;
 use num::Float;
 use std::collections::HashMap;
 use font_renderer::load_bitmap;
+use crate::glyph::Glyph;
 
 pub trait Game {
     fn new(context: &GameContext, size: LogicalSize) -> Self;
@@ -26,15 +27,16 @@ pub struct GameImpl {
     color_buffer: ColorBuffer,
     camera: Camera,
     cube: Cube,
+    glyph: Glyph,
     keyboard: HashMap<VirtualKeyCode, bool>,
 }
 
 impl Game for GameImpl  {
     fn new(context: &GameContext, size: LogicalSize) -> Self {
         let window: &Window = context.window.window();
-        window.set_cursor_grab(true);
+     //   window.set_cursor_grab(true);
         let res = Resources::from_relative_exe_path(Path::new("assets")).unwrap();
-        let font_bytes = res.load_bytes_from_file("droid-sans-mono.ttf").unwrap();
+
 
         let physical_size = size.to_physical(window.hidpi_factor());
         context.window.resize(physical_size);
@@ -44,19 +46,21 @@ impl Game for GameImpl  {
 
         let camera = Camera::new(size, Vec3::new(0.0, 0.0, 3.0), Vec3::new(0.0, 0.0, 0.0), &window);
         let cube = Cube::new(&res, &context.gl, nalgebra::Vector3::new(0.0,0.0,0.0)).unwrap();
-
+        let glyph = Glyph::new(&res, &context.gl,nalgebra::Vector3::new(0.0,0.0,0.0), 'p' ).unwrap();
         let mut input_map: HashMap<VirtualKeyCode, bool> = [].iter().cloned().collect();
 
         GameImpl {
             color_buffer,
             camera,
             cube,
+            glyph,
             keyboard:input_map,
         }
     }
 
     fn render(&self, context: &GameContext) {
         let gl = &context.gl;
+        /*
         let cube_positions = vec![
             nalgebra::Vector3::new(0.0,0.0,0.0),
             nalgebra::Vector3::new(2.0,5.0,-15.0),
@@ -80,6 +84,9 @@ impl Game for GameImpl  {
             self.cube.render(&gl, counter as f32 + angle, pos);
             counter += 1;
         }
+        */
+        self.color_buffer.clear(&gl);
+        self.glyph.render(&gl);
     }
 
     fn update(&mut self, dt: f32, context: &GameContext) {

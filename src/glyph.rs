@@ -31,22 +31,25 @@ impl Glyph {
         let shader_program = render_gl::Program::from_res(
             &gl, &res, "shaders/glyph"
         )?;
+        let font_bytes = res.load_bytes_from_file("droid-sans-mono.ttf").unwrap();
         let (font_img, font_map) = load_bitmap(font_bytes);
+        font_img.save("123.png");
+        let texture_scale_u32 = font_img.dimensions();
+       // let texture = Texture::from_res(&gl, &res, "texture/123.png", gl::RGBA)?;
         let texture = Texture::from_img(gl, font_img, gl::RGBA)?;
         let bounding_box = font_map.get(&letter).unwrap();
-        let texture_scale = font_img.dimensions();
+        println!("{:?}", bounding_box);
+
+        let texture_scale = (texture_scale_u32.0 as i32, texture_scale_u32.1 as i32);
         let x = unsafe { offset.get_unchecked(0) };
         let y = unsafe { offset.get_unchecked(1) };
         let z = unsafe { offset.get_unchecked(2) };
 
         let vertices: Vec<Vertex> = vec![
-            Vertex { position: (0.5 + *x, 0.5 + *y, 0.0).into(), texture: bounding_box.top_right(texture_scale).into()},
-            Vertex { position: (0.5 + *x, -0.5 + *y, 0.0).into(), texture: bounding_box.bottom_right(texture_scale).into()},
-            Vertex { position: (-0.5 + *x, -0.5 + *y, 0.0).into(), texture: bounding_box.bottom_left(texture_scale).into()},
-            Vertex { position: (-0.5 + *x,  0.5 + *y, 0.0).into(), texture: bounding_box.top_left(texture_scale).into()},
-        ];
-        let indicies: Vec<gl::types::GLuint> = vec![
-            0, 1, 3, 1, 2, 3,
+            Vertex { position: (0.5, 0.5, 0.0).into(), texture: bounding_box.top_right(texture_scale).into()},
+            Vertex { position: (0.5, -0.5, 0.0).into(), texture: bounding_box.bottom_right(texture_scale).into()},
+            Vertex { position: (-0.5, -0.5, 0.0).into(), texture: bounding_box.bottom_left(texture_scale).into()},
+            Vertex { position: (-0.5,  0.5, 0.0).into(), texture: bounding_box.top_left(texture_scale).into()},
         ];
         let indicies: Vec<gl::types::GLuint> = vec![
             0, 1, 3, 1, 2, 3,
@@ -79,10 +82,7 @@ impl Glyph {
 
     pub fn render(&self, gl: &gl::Gl) {
         self.program.set_used();
-        self.program.set_int("texture1", 0);
-
         unsafe {
-            gl.ActiveTexture(gl::TEXTURE0);
             self.texture.bind();
         }
         self.vao.bind();

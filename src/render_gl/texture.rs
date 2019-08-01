@@ -21,19 +21,18 @@ impl Texture {
     }
 
     pub fn from_img(gl: &Gl, img: DynamicImage, rgb_type: gl::types::GLenum) -> Result<Self, Error> {
+        let img = img.flipv();
         let mut texture = 0;
         unsafe {
             gl.GenTextures(1, &mut texture);
             gl.BindTexture(gl::TEXTURE_2D, texture);
 
-            gl.TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_S, gl::REPEAT as i32);
-            gl.TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_S, gl::REPEAT as i32);
+            gl.TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_S, gl::CLAMP_TO_BORDER as i32);
+            gl.TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_T, gl::CLAMP_TO_BORDER as i32);
 
             gl.TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MIN_FILTER, gl::NEAREST as i32);
             gl.TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, gl::LINEAR as i32);
         }
-
-        let img = img.flipv();
 
         unsafe {
             gl.TexImage2D(gl::TEXTURE_2D,
