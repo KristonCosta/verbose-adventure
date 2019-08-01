@@ -19,6 +19,9 @@ use crate::console::Console;
 use std::time::Instant;
 use failure::_core::time::Duration;
 use crate::render_gl::data;
+use crate::color::Color;
+use crate::map::{Map, make_map};
+use crate::object::Object;
 
 pub trait Game {
     fn new(context: &GameContext, size: LogicalSize) -> Self;
@@ -27,38 +30,13 @@ pub trait Game {
     fn process_input(&mut self, pending_input: InputEvent, context: &GameContext);
 }
 
-type Color = data::f32_f32_f32;
-
-const COLOR_DARK_WALL: data::f32_f32_f32 = Color::new(0.0,0.0, 100.0);
-const COLOR_DARK_GROUND: data::f32_f32_f32 = Color::new(50.0,50.0, 150.0);
-
-pub struct Object {
-    position: (i32, i32),
-    ch: char,
-    color: Color,
-}
-
-impl Object {
-    pub fn set_position(&mut self, x: i32, y: i32) {
-        self.position.0 = clamp(x, 0, self.clamp.0 - 1);
-        self.position.1 = clamp(y, 0, self.clamp.1 - 1);
-    }
-
-    pub fn dx(&mut self, dx: i32) {
-        self.set_position(self.position.0 + dx, self.position.1);
-    }
-
-    pub fn dy(&mut self, dy: i32) {
-        self.set_position(self.position.0, self.position.1 + dy);
-    }
-}
-
 
 pub struct GameImpl {
     color_buffer: ColorBuffer,
     camera: Camera,
     console: Console,
-    player: Player,
+    map: Map,
+    player: Object,
     keyboard: HashMap<VirtualKeyCode, bool>,
     input_limiter: Instant,
 }
@@ -76,17 +54,18 @@ impl Game for GameImpl  {
 
         let camera = Camera::new(size, Vec3::new(0.0, 0.0, 3.0), Vec3::new(0.0, 0.0, 0.0), &window);
         let map_size = (80, 50);
-        let mut console = Console::new(&res, &context.gl,map_size, size.clone(), data::f32_f32_f32::new(0.0, 0.0, 0.0)).unwrap();
+        let mut console = Console::new(&res, &context.gl,map_size, size.clone(), data::f32_f32_f32::new(255.0, 255.0, 255.0)).unwrap();
         let mut input_map: HashMap<VirtualKeyCode, bool> = [].iter().cloned().collect();
-        let player = Player {
-            position: (25, 15),
-            clamp: (map_size.0 as i32, map_size.1 as i32),
-        };
+
+        let (map, player_pos) = make_map(map_size.0 as usize, map_size.1 as usize, 15, 5, 20);
+        let color_dark_ground: data::f32_f32_f32 = Color::new(50.0,50.0, 150.0);
+        let player = Object::new(player_pos, '@', color_dark_ground);
         GameImpl {
             color_buffer,
             camera,
             console,
             player,
+            map,
             keyboard:input_map,
             input_limiter: Instant::now(),
         }
@@ -94,15 +73,31 @@ impl Game for GameImpl  {
 
     fn render(&mut self, context: &GameContext) {
         let gl = &context.gl;
+        let color_dark_wall: data::f32_f32_f32 = Color::from_int(0, 0, 100);
+        let color_dark_ground: data::f32_f32_f32 = Color::from_int(50, 50, 150);
+
         self.color_buffer.clear(&gl);
         self.console.clear();
-        self.console.put_char('@', self.player.position.0, self.player.position.1, Some(data::f32_f32_f32::new(100.0,0.0,0.0)));
-        self.console.put_char(' ', self.player.position.0 + 1, self.player.position.1 + 1, Some(data::f32_f32_f32::new(100.0,100.0,0.0)));
+        for x in 0..self.map.len() {
+            for y in 0..self.map[x].len() {
+                if !(self.map[x][y].block_sight) {
+                    self.console.put_char(
+                        ' ',
+                        x as i32, y as i32, Some(color_dark_ground));
+
+                } else {
+                    self.console.put_char(
+                        ' ',
+                        x as i32, y as i32, Some(color_dark_wall))
+                }
+            }
+        }
+        self.console.put_char('@', self.player.position.0, self.player.position.1, Some(color_dark_wall));
         self.console.render(&gl);
     }
 
     fn update(&mut self, dt: f32, context: &GameContext) {
-        if self.input_limiter.elapsed() > Duration::from_millis(50) {
+        if self.input_limiter.elapsed() > Duration::from_millis(1) {
             let front = self.camera.front();
             let up = self.camera.up();
             let speed = 1.0 * dt as f32;// * dt as f32;
@@ -110,16 +105,16 @@ impl Game for GameImpl  {
             let norm_cross = front.cross(&up).normalize() * speed;
             let input_map = &self.keyboard;
             if input_map.contains_key(&VirtualKeyCode::W) && input_map[&VirtualKeyCode::W] {
-                self.player.dy(1);
+                self.player.move_by(0, 1, &self.map);
             }
             if input_map.contains_key(&VirtualKeyCode::A) && input_map[&VirtualKeyCode::A] {
-                self.player.dx(-1);
+                self.player.move_by(-1, 0, &self.map);
             }
             if input_map.contains_key(&VirtualKeyCode::S) && input_map[&VirtualKeyCode::S] {
-                self.player.dy(-1);
+                self.player.move_by(0, -1, &self.map);
             }
             if input_map.contains_key(&VirtualKeyCode::D) && input_map[&VirtualKeyCode::D] {
-                self.player.dx(1);
+                self.player.move_by(1, 0, &self.map);
             }
             self.input_limiter = Instant::now();
         }

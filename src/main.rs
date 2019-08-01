@@ -20,6 +20,9 @@ mod glyph;
 mod game_handler;
 mod console;
 mod console_vertex;
+mod map;
+mod object;
+mod color;
 
 use gl::Gl;
 use render_gl::{data, color_buffer};
