@@ -1,5 +1,9 @@
 use rand::Rng;
 use std::cmp;
+use crate::object::Object;
+use crate::color::Color;
+
+const MAX_ROOM_MONSTERS : u32 = 3;
 
 #[derive(Clone, Copy, Debug)]
 pub struct Tile {
@@ -85,12 +89,31 @@ pub fn is_valid_move(map: &Map, x: i32, y: i32) -> bool {
         && !map[x as usize][y as usize].blocked
 }
 
+
+fn place_objects(room: Rect, objects: &mut Vec<Object>) {
+    let num_monsters = rand::thread_rng().gen_range(0, MAX_ROOM_MONSTERS + 1);
+    let desaturated_green = Color::from_int(25, 125, 35, 1.0);
+    let light_green = Color::from_int(90, 165, 30, 1.0);
+    for _ in 0..num_monsters {
+        let x = rand::thread_rng().gen_range(room.x1 + 1, room.x2);
+        let y = rand::thread_rng().gen_range(room.y1 + 1, room.y2);
+
+        let mut monster = if rand::random::<f32>() < 0.8 {
+            Object::new((x, y), 'o', desaturated_green, "orc", true)
+        } else {
+            Object::new((x, y), 'T', light_green, "troll", true)
+        };
+        objects.push(monster);
+    }
+}
+
 pub fn make_map(
     width: usize,
     height: usize,
     room_max_size: i32,
     room_min_size: i32,
     max_rooms: i32,
+    objects: &mut Vec<Object>,
 ) -> (Map, (i32, i32)) {
     let mut map = vec![vec![Tile::wall(); height]; width];
     let mut rooms = vec![];
@@ -106,6 +129,7 @@ pub fn make_map(
             .any(|other_room| new_room.intersects_with(other_room));
         if !failed {
             create_room(new_room, &mut map);
+            place_objects(new_room, objects);
             let (new_x, new_y) = new_room.center();
             if rooms.is_empty() {
                 starting_position = (new_x, new_y);

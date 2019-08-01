@@ -36,7 +36,7 @@ pub struct GameImpl {
     camera: Camera,
     console: Console,
     map: Map,
-    player: Object,
+    objects: Vec<Object>,
     keyboard: HashMap<VirtualKeyCode, bool>,
     input_limiter: Instant,
 }
@@ -56,15 +56,19 @@ impl Game for GameImpl  {
         let map_size = (80, 50);
         let mut console = Console::new(&res, &context.gl,map_size, size.clone(), data::f32_f32_f32_f32::new(255.0, 255.0, 255.0, 1.0)).unwrap();
         let mut input_map: HashMap<VirtualKeyCode, bool> = [].iter().cloned().collect();
+        let mut objects = vec![];
+        let white: Color = Color::from_int(200, 200,200,1.0);
+        objects.push(Object::new((0, 0), '@', white, "player", true));
 
-        let (map, player_pos) = make_map(map_size.0 as usize, map_size.1 as usize, 15, 5, 20);
+        let (map, player_pos) = make_map(map_size.0 as usize, map_size.1 as usize, 15, 5, 20, &mut objects);
+        let player = &mut objects[0];
+        player.position = player_pos;
         let color_dark_ground: Color = Color::new(50.0,50.0, 150.0, 1.0);
-        let player = Object::new(player_pos, '@', color_dark_ground);
         GameImpl {
             color_buffer,
             camera,
             console,
-            player,
+            objects,
             map,
             keyboard:input_map,
             input_limiter: Instant::now(),
@@ -93,29 +97,32 @@ impl Game for GameImpl  {
                 }
             }
         }
-        self.console.put_char('@', self.player.position.0, self.player.position.1, white, Some(clear));
+        for obj in self.objects.iter() {
+            self.console.put_char(obj.glyph, obj.position.0, obj.position.1, obj.color, Some(clear));
+        }
+
         self.console.render(&gl);
     }
 
     fn update(&mut self, dt: f32, context: &GameContext) {
-        if self.input_limiter.elapsed() > Duration::from_millis(1) {
+        if self.input_limiter.elapsed() > Duration::from_millis(50) {
             let front = self.camera.front();
             let up = self.camera.up();
             let speed = 1.0 * dt as f32;// * dt as f32;
-
+            let mut player = &mut self.objects[0];
             let norm_cross = front.cross(&up).normalize() * speed;
             let input_map = &self.keyboard;
             if input_map.contains_key(&VirtualKeyCode::W) && input_map[&VirtualKeyCode::W] {
-                self.player.move_by(0, 1, &self.map);
+                player.move_by(0, 1, &self.map);
             }
             if input_map.contains_key(&VirtualKeyCode::A) && input_map[&VirtualKeyCode::A] {
-                self.player.move_by(-1, 0, &self.map);
+                player.move_by(-1, 0, &self.map);
             }
             if input_map.contains_key(&VirtualKeyCode::S) && input_map[&VirtualKeyCode::S] {
-                self.player.move_by(0, -1, &self.map);
+                player.move_by(0, -1, &self.map);
             }
             if input_map.contains_key(&VirtualKeyCode::D) && input_map[&VirtualKeyCode::D] {
-                self.player.move_by(1, 0, &self.map);
+                player.move_by(1, 0, &self.map);
             }
             self.input_limiter = Instant::now();
         }
