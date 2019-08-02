@@ -1,12 +1,10 @@
-use crate::render_gl::viewport::Viewport;
-use crate::render_gl::math::radians;
-use nalgebra_glm::{TMat4, Mat4, Vec3, U3};
-use crate::render_gl::Program;
-use glutin::{ContextWrapper, dpi::{LogicalSize, PhysicalSize}, window::Window};
-use nalgebra::min;
-use num::clamp;
-use num::Float;
 
+use crate::render_gl::viewport::Viewport;
+use nalgebra_glm::{Mat4, Vec3, U3};
+use crate::render_gl::Program;
+use glutin::{dpi::{LogicalSize, PhysicalSize}, window::Window};
+use num::clamp;
+#[allow(dead_code)]
 pub struct Camera {
     viewport: Viewport,
     position: Vec3,
@@ -17,6 +15,7 @@ pub struct Camera {
     pub size: LogicalSize,
 }
 
+#[allow(dead_code)]
 impl Camera {
     pub fn new(size: LogicalSize, position: Vec3, target: Vec3, window: &Window) -> Self {
         let viewport = Viewport::for_window(size, window);
@@ -75,7 +74,7 @@ impl Camera {
         self.viewport.set_used(gl);
 
         let view = self.look_at();
-        let projection =  nalgebra_glm::perspective(radians(self.fov), self.viewport.aspect_ratio(), 0.1, 100.0);
+        let projection =  nalgebra_glm::perspective(self.fov.to_radians(), self.viewport.aspect_ratio(), 0.1, 100.0);
 
         program.set_mat_4f("view", view);
         program.set_mat_4f("projection", projection);
@@ -85,7 +84,7 @@ impl Camera {
         self.viewport.update_size(size, window)
     }
 
-    pub fn reset_mouse_position(&self, window: &Window) -> () {
+    pub fn reset_mouse_position(&self, window: &Window) {
         window.set_cursor_position((self.size.width / 2.0, self.size.height/ 2.0).into()).unwrap();
     }
 

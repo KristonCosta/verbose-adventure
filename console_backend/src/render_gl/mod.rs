@@ -1,7 +1,6 @@
 mod shader;
 pub use self::shader::{Shader, Program};
 
-pub mod math;
 pub mod camera;
 pub mod data;
 pub mod buffer;

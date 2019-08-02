@@ -1,7 +1,7 @@
 use std::path::{PathBuf, Path};
 use std::{io, ffi, fs};
 use std::io::Read;
-use image::{ImageBuffer, GenericImage, ImageError, DynamicImage};
+use image::{ImageError, DynamicImage};
 
 #[derive(Debug, Fail)]
 pub enum Error {

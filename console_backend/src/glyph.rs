@@ -1,13 +1,4 @@
-use crate::render_gl;
-use crate::render_gl::{buffer, data};
-use crate::resources::Resources;
-use crate::render_gl::buffer::{ArrayBuffer, VertexArray, ElementArrayBuffer};
-use crate::render_gl::texture::Texture;
-use nalgebra_glm::{TVec, TVec1, RealField};
-use crate::render_gl::math::radians;
-use nalgebra::{Vector3, Vector4};
-use font_renderer::load_bitmap;
-use image::GenericImageView;
+use crate::render_gl::{data};
 
 #[derive(Debug, Copy, Clone)]
 pub struct Glyph {

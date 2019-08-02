@@ -12,7 +12,7 @@ use crate::glyph::Glyph;
 use glutin::{
     dpi::LogicalSize,
 };
-use nalgebra::{Vector3, Vector4};
+use core::ptr;
 
 pub struct Console {
     is_dirty: RefCell<Dirty>,
@@ -92,7 +92,7 @@ impl Console {
         }
         let background = match background {
             Some(b) => b,
-            None => self.default_background.clone()
+            None => self.default_background
         };
         self.is_dirty.borrow_mut().set(true);
         self.glyphs.insert(self.coordinates_to_index(x as u32, y as u32), Glyph::new(c, background, foreground));
@@ -149,7 +149,7 @@ impl Console {
                     background: glyph.background },
             ]);
             indices.append(&mut vec![
-                0 + index_offset, 1 + index_offset, 3 + index_offset, 1 + index_offset, 2 + index_offset, 3 + index_offset,
+                index_offset, 1 + index_offset, 3 + index_offset, 1 + index_offset, 2 + index_offset, 3 + index_offset,
             ]);
             num_glyphs += 1;
         }
@@ -178,16 +178,16 @@ impl Console {
             self.num_vert.borrow_mut().set(num_glyphs);
         }
         self.program.set_used();
-        unsafe {
-            self.texture.bind();
-        }
+
+        self.texture.bind();
+
         self.vao.bind();
         unsafe {
             gl.DrawElements(
                 gl::TRIANGLES,
                 self.num_vert.borrow().0 * 6,
                 gl::UNSIGNED_INT,
-                0 as *const gl::types::GLvoid,
+                ptr::null(),
             );
         }
     }

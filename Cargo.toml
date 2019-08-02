@@ -11,6 +11,7 @@ glutin = "0.22.0-alpha1"
 gl = { path = "lib/gl" }
 render_gl_derive = { path = "render_gl_derive" }
 font_renderer = { path = "font_renderer" }
+console_backend = { path = "console_backend" }
 failure = "0.1.5"
 nalgebra = "0.18.0"
 nalgebra-glm = "0.4.0"

@@ -1,8 +1,6 @@
 use gl::Gl;
 use std::time::Instant;
-use std::collections::HashMap;
 use crate::game::Game;
-use nalgebra_glm::{RealField, Vec3, U3};
 
 use glutin::{
     ContextBuilder,
@@ -27,10 +25,11 @@ pub struct GameContext {
 }
 
 impl GameContext {
+    #[allow(dead_code)]
     pub fn dt(&self, time: Instant) -> f32 {
         (self.start_time - time).as_secs_f32()
     }
-
+    #[allow(dead_code)]
     pub fn elapsed(&self) -> Duration {
         self.start_time.elapsed()
     }
@@ -75,7 +74,7 @@ impl GameHandler {
 
         let windowed_context = ContextBuilder::new()
             .with_gl(GlRequest::Specific(Api::OpenGl, (4, 1)))
-            .with_vsync(true)
+            .with_vsync(false)
             .build_windowed(output, &event_loop).unwrap();
 
         let windowed_context = unsafe { windowed_context.make_current().expect("Could not make windowed context current") };
@@ -101,17 +100,15 @@ impl GameHandler {
 
 
     pub fn run<G: Game + 'static>(&mut self) -> Result<(), failure::Error>{
-
-        let mut time = Instant::now();
         let mut last_frame = Instant::now();
 
         let context = self.context.take().unwrap();
-        let gl = context.gl.clone();
         let event_loop = self.event_loop.take().unwrap();
         let mut game = G::new(&context, self.size);
         event_loop.run(move |event, _, control_flow| {
             let now = Instant::now();
-            let dt = ((now - last_frame).as_micros() as f64 / 1_000_000.0);
+            let dt = (now - last_frame).as_micros() as f64 / 1_000_000.0;
+            println!("FPS: {}", 1.0 / dt);
             last_frame = now;
             let mut pending_input = None;
             match event {
@@ -206,8 +203,6 @@ impl GameHandler {
             }
             game.update(dt as f32, &context);
         });
-
-        Ok(())
     }
 }
 

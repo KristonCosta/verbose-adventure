@@ -1,5 +1,5 @@
 use gl;
-use glutin::{ContextWrapper, dpi::{LogicalSize, PhysicalSize}, window::Window};
+use glutin::{dpi::{LogicalSize, PhysicalSize}, window::Window};
 
 pub struct Viewport {
     pub x: i32,

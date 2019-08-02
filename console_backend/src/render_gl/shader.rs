@@ -2,7 +2,6 @@
 use gl::Gl;
 use std::ffi::{CStr, CString};
 use crate::resources::Resources;
-use crate::resources;
 use crate::render_gl::errors::Error;
 
 pub struct Program {
@@ -77,36 +76,37 @@ impl Program {
         Ok(Program { id: program_id, gl: gl.clone() })
     }
 
-    pub fn id(&self) -> gl::types::GLuint {
-        self.id
-    }
-
     pub fn set_used(&self) {
         unsafe {
             self.gl.UseProgram(self.id);
         }
     }
 
+    #[allow(dead_code)]
     pub fn set_bool(&self, name: &str, value: bool) {
         let location = self.get_uniform_location(name);
         unsafe { self.gl.Uniform1i(location, value as gl::types::GLint) }
     }
 
+    #[allow(dead_code)]
     pub fn set_int(&self, name: &str, value: i32) {
         let location = self.get_uniform_location(name);
         unsafe { self.gl.Uniform1i(location, value as gl::types::GLint) }
     }
 
+    #[allow(dead_code)]
     pub fn set_float(&self, name: &str, value: f32) {
         let location = self.get_uniform_location(name);
         unsafe { self.gl.Uniform1f(location, value as gl::types::GLfloat) }
     }
 
+    #[allow(dead_code)]
     pub fn set_mat_4f(&self, name: &str, value: nalgebra_glm::Mat4) {
         let location = self.get_uniform_location(name);
         unsafe { self.gl.UniformMatrix4fv(location, 1, gl::FALSE, value.as_ptr() as *const gl::types::GLfloat)}
     }
 
+    #[allow(dead_code)]
     pub fn get_uniform_location(&self, name: &str) -> i32 {
         let name = CString::new(name).unwrap();
         unsafe {
@@ -157,10 +157,12 @@ impl Shader {
         })
     }
 
+    #[allow(dead_code)]
     pub fn from_vert_source(gl: &Gl, source: &CStr) -> Result<Shader, String> {
         Shader::from_source(gl, source, gl::VERTEX_SHADER)
     }
 
+    #[allow(dead_code)]
     pub fn from_frag_source(gl: &Gl, source: &CStr) -> Result<Shader, String> {
         Shader::from_source(gl, source, gl::FRAGMENT_SHADER)
     }

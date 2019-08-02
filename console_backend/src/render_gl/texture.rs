@@ -10,6 +10,7 @@ pub struct Texture {
 }
 
 impl Texture {
+    #[allow(dead_code)]
     pub fn from_res(gl: &Gl, res: &Resources, name: &str, rgb_type: gl::types::GLenum) -> Result<Self, Error> {
         let img = res.load_image(name).map_err(|err| {
             Error::ResourceLoad {

@@ -1,6 +1,5 @@
 use crate::map::{is_valid_move, Map};
-use nalgebra::Vector;
-use crate::color::Color;
+use console_backend::Color;
 
 #[derive(Debug)]
 pub struct Object {
@@ -24,6 +23,7 @@ impl Object {
         }
     }
 
+    #[allow(clippy::ptr_arg)]
     pub fn move_by(&mut self, dx: i32, dy: i32, map: &Map) {
         let desired_x = self.position.0 + dx;
         let desired_y = self.position.1 + dy;

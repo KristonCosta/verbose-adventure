@@ -1,25 +1,26 @@
 use crate::game_handler::{GameContext, InputEvent};
-use crate::render_gl::color_buffer::ColorBuffer;
-use crate::render_gl::camera::Camera;
+
 use glutin::{
     dpi::LogicalSize,
     window::Window,
     event::VirtualKeyCode,
 };
-use failure::Fail;
-use nalgebra_glm::{RealField, Vec3, U3};
-use crate::cube::Cube;
-use crate::resources::Resources;
+
+use nalgebra_glm::Vec3;
+
+use console_backend::{
+    ColorBuffer,
+    Camera,
+    resources::Resources,
+    Console,
+    data,
+    Color
+};
+
 use std::path::Path;
-use num::{Float, clamp};
 use std::collections::HashMap;
-use font_renderer::load_bitmap;
-use crate::glyph::Glyph;
-use crate::console::Console;
 use std::time::Instant;
 use failure::_core::time::Duration;
-use crate::render_gl::data;
-use crate::color::Color;
 use crate::map::{Map, make_map};
 use crate::object::Object;
 
@@ -54,8 +55,8 @@ impl Game for GameImpl  {
 
         let camera = Camera::new(size, Vec3::new(0.0, 0.0, 3.0), Vec3::new(0.0, 0.0, 0.0), &window);
         let map_size = (80, 50);
-        let mut console = Console::new(&res, &context.gl,map_size, size.clone(), data::f32_f32_f32_f32::new(255.0, 255.0, 255.0, 1.0)).unwrap();
-        let mut input_map: HashMap<VirtualKeyCode, bool> = [].iter().cloned().collect();
+        let console = Console::new(&res, &context.gl,map_size, size, data::f32_f32_f32_f32::new(255.0, 255.0, 255.0, 1.0)).unwrap();
+        let input_map: HashMap<VirtualKeyCode, bool> = [].iter().cloned().collect();
         let mut objects = vec![];
         let white: Color = Color::from_int(200, 200,200,1.0);
         objects.push(Object::new((0, 0), '@', white, "player", true));
@@ -63,7 +64,6 @@ impl Game for GameImpl  {
         let (map, player_pos) = make_map(map_size.0 as usize, map_size.1 as usize, 15, 5, 20, &mut objects);
         let player = &mut objects[0];
         player.position = player_pos;
-        let color_dark_ground: Color = Color::new(50.0,50.0, 150.0, 1.0);
         GameImpl {
             color_buffer,
             camera,
@@ -80,7 +80,6 @@ impl Game for GameImpl  {
         let color_dark_wall: Color = Color::from_int(0, 0, 100, 1.0);
         let color_dark_ground: Color = Color::from_int(50, 50, 150, 1.0);
         let clear: Color = Color::from_int(0, 0, 0, 0.0);
-        let white: Color = Color::from_int(200, 200,200,1.0);
         self.color_buffer.clear(&gl);
         self.console.clear();
         for x in 0..self.map.len() {
@@ -104,13 +103,9 @@ impl Game for GameImpl  {
         self.console.render(&gl);
     }
 
-    fn update(&mut self, dt: f32, context: &GameContext) {
-        if self.input_limiter.elapsed() > Duration::from_millis(50) {
-            let front = self.camera.front();
-            let up = self.camera.up();
-            let speed = 1.0 * dt as f32;// * dt as f32;
-            let mut player = &mut self.objects[0];
-            let norm_cross = front.cross(&up).normalize() * speed;
+    fn update(&mut self, _dt: f32, _context: &GameContext) {
+        if self.input_limiter.elapsed() > Duration::from_millis(0) {
+            let player = &mut self.objects[0];
             let input_map = &self.keyboard;
             if input_map.contains_key(&VirtualKeyCode::W) && input_map[&VirtualKeyCode::W] {
                 player.move_by(0, 1, &self.map);
@@ -129,7 +124,7 @@ impl Game for GameImpl  {
 
     }
 
-    fn process_input(&mut self, pending_input: InputEvent, context: &GameContext) {
+    fn process_input(&mut self, pending_input: InputEvent, _context: &GameContext) {
         match pending_input {
             InputEvent::KeyReleased(event) => {
                 self.keyboard.insert(event.data, false);

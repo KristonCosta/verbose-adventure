@@ -23,6 +23,7 @@ pub struct Buffer<B> where B: BufferType {
     _marker: ::std::marker::PhantomData<B>,
 }
 
+#[allow(dead_code)]
 impl<B> Buffer<B> where B: BufferType {
     pub fn new(gl: &gl::Gl) -> Self {
         let mut vbo: gl::types::GLuint = 0;
@@ -53,7 +54,7 @@ impl<B> Buffer<B> where B: BufferType {
         unsafe {
             self.gl.BufferData(
                 B::BUFFER_TYPE,
-                ((data.len() * ::std::mem::size_of::<T>()) as gl::types::GLsizeiptr),
+                (data.len() * ::std::mem::size_of::<T>()) as gl::types::GLsizeiptr,
                 data.as_ptr() as *const gl::types::GLvoid,
                 gl::STATIC_DRAW,
             )
@@ -64,7 +65,7 @@ impl<B> Buffer<B> where B: BufferType {
         unsafe {
             self.gl.BufferData(
                 B::BUFFER_TYPE,
-                ((data.len() * ::std::mem::size_of::<T>()) as gl::types::GLsizeiptr),
+                (data.len() * ::std::mem::size_of::<T>()) as gl::types::GLsizeiptr,
                 data.as_ptr() as *const gl::types::GLvoid,
                 gl::DYNAMIC_DRAW,
             )
@@ -75,7 +76,7 @@ impl<B> Buffer<B> where B: BufferType {
 impl<B> Drop for Buffer<B> where B: BufferType {
     fn drop(&mut self) {
         unsafe {
-            self.gl.DeleteBuffers(1, &mut self.vbo);
+            self.gl.DeleteBuffers(1,  &self.vbo);
         }
     }
 }
@@ -113,7 +114,7 @@ impl VertexArray {
 impl Drop for VertexArray {
     fn drop(&mut self) {
         unsafe {
-            self.gl.DeleteVertexArrays(1, &mut self.vao);
+            self.gl.DeleteVertexArrays(1, &self.vao);
         }
     }
 }

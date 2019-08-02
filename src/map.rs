@@ -1,7 +1,8 @@
+use console_backend::Color;
 use rand::Rng;
 use std::cmp;
 use crate::object::Object;
-use crate::color::Color;
+
 
 const MAX_ROOM_MONSTERS : u32 = 3;
 
@@ -81,6 +82,7 @@ fn create_v_tunnel(y1: i32, y2: i32, x: i32, map: &mut Map) {
 
 pub type Map = Vec<Vec<Tile>>;
 
+#[allow(clippy::ptr_arg)]
 pub fn is_valid_move(map: &Map, x: i32, y: i32) -> bool {
     x >= 0
         && x < map.len() as i32
@@ -98,7 +100,7 @@ fn place_objects(room: Rect, objects: &mut Vec<Object>) {
         let x = rand::thread_rng().gen_range(room.x1 + 1, room.x2);
         let y = rand::thread_rng().gen_range(room.y1 + 1, room.y2);
 
-        let mut monster = if rand::random::<f32>() < 0.8 {
+        let monster = if rand::random::<f32>() < 0.8 {
             Object::new((x, y), 'o', desaturated_green, "orc", true)
         } else {
             Object::new((x, y), 'T', light_green, "troll", true)
