@@ -21,7 +21,7 @@ use std::path::Path;
 use std::collections::HashMap;
 use std::time::Instant;
 use failure::_core::time::Duration;
-use crate::map::{Map, make_map};
+use crate::map::{Map, make_map, move_by};
 use crate::object::Object;
 
 pub trait Game {
@@ -87,17 +87,19 @@ impl Game for GameImpl  {
                 if !(self.map[x][y].block_sight) {
                     self.console.put_char(
                         ' ',
-                        x as i32, y as i32, clear, Some(color_dark_ground));
+                        x as i32, y as i32, clear, Some(color_dark_ground), 2);
 
                 } else {
                     self.console.put_char(
                         ' ',
-                        x as i32, y as i32, clear, Some(color_dark_wall))
+                        x as i32, y as i32, clear, Some(color_dark_wall), 2)
                 }
             }
         }
+        self.console.render(&gl);
+        self.console.clear();
         for obj in self.objects.iter() {
-            self.console.put_char(obj.glyph, obj.position.0, obj.position.1, obj.color, Some(clear));
+            self.console.put_char(obj.glyph, obj.position.0, obj.position.1, obj.color, Some(clear), 0);
         }
 
         self.console.render(&gl);
@@ -108,16 +110,16 @@ impl Game for GameImpl  {
             let player = &mut self.objects[0];
             let input_map = &self.keyboard;
             if input_map.contains_key(&VirtualKeyCode::W) && input_map[&VirtualKeyCode::W] {
-                player.move_by(0, 1, &self.map);
+                move_by(0, 0, 1, &self.map, &mut self.objects);
             }
             if input_map.contains_key(&VirtualKeyCode::A) && input_map[&VirtualKeyCode::A] {
-                player.move_by(-1, 0, &self.map);
+                move_by(0, -1, 0, &self.map, &mut self.objects);
             }
             if input_map.contains_key(&VirtualKeyCode::S) && input_map[&VirtualKeyCode::S] {
-                player.move_by(0, -1, &self.map);
+                move_by(0, 0, -1, &self.map, &mut self.objects);
             }
             if input_map.contains_key(&VirtualKeyCode::D) && input_map[&VirtualKeyCode::D] {
-                player.move_by(1, 0, &self.map);
+                move_by(0, 1, 0, &self.map, &mut self.objects);
             }
             self.input_limiter = Instant::now();
         }

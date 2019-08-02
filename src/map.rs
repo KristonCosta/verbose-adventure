@@ -83,12 +83,15 @@ fn create_v_tunnel(y1: i32, y2: i32, x: i32, map: &mut Map) {
 pub type Map = Vec<Vec<Tile>>;
 
 #[allow(clippy::ptr_arg)]
-pub fn is_valid_move(map: &Map, x: i32, y: i32) -> bool {
+pub fn is_not_blocked(map: &Map, x: i32, y: i32, objects: &[Object]) -> bool {
     x >= 0
         && x < map.len() as i32
         && y >= 0
         && y < map[0].len() as i32
         && !map[x as usize][y as usize].blocked
+        && !objects.iter().any(|obj| {
+            obj.position == (x, y) && obj.blocks
+    })
 }
 
 
@@ -149,4 +152,13 @@ pub fn make_map(
         }
     }
     (map, starting_position)
+}
+
+
+#[allow(clippy::ptr_arg)]
+pub fn move_by(id: usize, dx: i32, dy: i32, map: &Map, objects: &mut [Object]) {
+    let (x, y) = objects[id].position;
+    if is_not_blocked(map, x + dx, y + dy, objects) {
+        objects[id].position = (x + dx, y + dy);
+    }
 }

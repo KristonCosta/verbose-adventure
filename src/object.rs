@@ -1,4 +1,3 @@
-use crate::map::{is_valid_move, Map};
 use console_backend::Color;
 
 #[derive(Debug)]
@@ -20,16 +19,6 @@ impl Object {
             blocks,
             name: name.into(),
             alive: true,
-        }
-    }
-
-    #[allow(clippy::ptr_arg)]
-    pub fn move_by(&mut self, dx: i32, dy: i32, map: &Map) {
-        let desired_x = self.position.0 + dx;
-        let desired_y = self.position.1 + dy;
-        if is_valid_move(map, desired_x, desired_y) {
-            self.position.0 = desired_x;
-            self.position.1 = desired_y;
         }
     }
 }

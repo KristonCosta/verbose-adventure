@@ -108,7 +108,7 @@ impl GameHandler {
         event_loop.run(move |event, _, control_flow| {
             let now = Instant::now();
             let dt = (now - last_frame).as_micros() as f64 / 1_000_000.0;
-            println!("FPS: {}", 1.0 / dt);
+          //  println!("FPS: {}", 1.0 / dt);
             last_frame = now;
             let mut pending_input = None;
             match event {
