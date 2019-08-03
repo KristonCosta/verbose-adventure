@@ -1,5 +1,5 @@
 use image::{DynamicImage, Rgba, RgbaImage};
-use rusttype::{point, Font, Scale};
+use rusttype::{point, Font, Scale, PositionedGlyph};
 use std::collections::HashMap;
 
 #[derive(Debug)]
@@ -41,11 +41,10 @@ impl BoundingBox {
     }
 }
 
-pub fn load_bitmap(data: Vec<u8>) -> (DynamicImage, HashMap<char, BoundingBox>, (u32, u32)) {
+fn prepare_glyphs(data:Vec<u8>, text: &str, height: f32) -> (DynamicImage, Vec<PositionedGlyph>, (u32, u32)) {
     let font = Font::from_bytes(data).unwrap();
-    let height = 100.0;
     let scale = Scale::uniform(height);
-    let text = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ12345567890!@#$%^&*()?<>|";
+
     // let text = "ABC";
     let color = (255, 255, 255);
     let v_metrics = font.v_metrics(scale);
@@ -78,14 +77,10 @@ pub fn load_bitmap(data: Vec<u8>) -> (DynamicImage, HashMap<char, BoundingBox>, 
             )
         }
     }
-
-    let mut map = HashMap::new();
-    let mut counter = 0;
-
-    for glyph in glyphs {
+    for glyph in glyphs.iter() {
         if let Some(bounding_box) = glyph.pixel_bounding_box() {
             glyph.draw(|x, y, v| {
-                if v >  0.2 {
+                if v > 0.2 {
                     image.put_pixel(
                         x + bounding_box.min.x as u32,
                         y + bounding_box.min.y as u32,
@@ -93,12 +88,26 @@ pub fn load_bitmap(data: Vec<u8>) -> (DynamicImage, HashMap<char, BoundingBox>, 
                     )
                 }
             });
+        }
+    }
+    (DynamicImage::ImageRgba8(image), glyphs, (glyphs_width, glyphs_height))
+}
 
+pub fn load_bitmap(data: Vec<u8>) -> (DynamicImage, HashMap<char, BoundingBox>) {
+    let text = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ12345567890!@#$%^&*()?<>|";
+    let height = 100.0;
+    let (image, glyphs, (glyphs_width, glyphs_height)) = prepare_glyphs(data, text, height);
+
+    let mut map = HashMap::new();
+    let mut counter = 0;
+
+    for glyph in glyphs.iter() {
+        if let Some(bounding_box) = glyph.pixel_bounding_box() {
             map.insert(text.chars().nth(counter).unwrap(), BoundingBox{
                 x1: bounding_box.min.x,
                 x2: bounding_box.max.x,
                 y1: height as i32 - bounding_box.max.y - 1,
-                y2: height as i32 - bounding_box.min.y + 1,
+                y2: height as i32,
             });
         }
         counter += 1;
@@ -111,5 +120,5 @@ pub fn load_bitmap(data: Vec<u8>) -> (DynamicImage, HashMap<char, BoundingBox>, 
         y2: 1,
     });
 
-    (DynamicImage::ImageRgba8(image), map, (glyphs_width, glyphs_height))
+    (image, map)
 }

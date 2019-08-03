@@ -1,7 +1,7 @@
 use console_backend::Color;
 use rand::Rng;
 use std::cmp;
-use crate::object::Object;
+use crate::object::{Object, Fighter, Ai};
 
 
 const MAX_ROOM_MONSTERS : u32 = 3;
@@ -104,9 +104,25 @@ fn place_objects(room: Rect, objects: &mut Vec<Object>) {
         let y = rand::thread_rng().gen_range(room.y1 + 1, room.y2);
 
         let monster = if rand::random::<f32>() < 0.8 {
-            Object::new((x, y), 'o', desaturated_green, "orc", true)
+            let mut obj = Object::new((x, y), 'o', desaturated_green, "orc", true);
+            obj.fighter = Some(Fighter {
+                max_hp: 10,
+                hp: 10,
+                defense: 0,
+                power: 3,
+            });
+            obj.ai = Some(Ai);
+            obj
         } else {
-            Object::new((x, y), 'T', light_green, "troll", true)
+            let mut obj = Object::new((x, y), 'T', light_green, "troll", true);
+            obj.fighter = Some(Fighter {
+                max_hp: 16,
+                hp: 16,
+                defense: 1,
+                power: 4,
+            });
+            obj.ai = Some(Ai);
+            obj
         };
         objects.push(monster);
     }

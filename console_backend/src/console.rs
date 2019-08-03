@@ -23,7 +23,7 @@ pub struct Console {
     texture: Texture,
     glyph_size: (f32, f32),
     glyph_map: HashMap<char, BoundingBox>,
-    glyphs: HashMap<u32, Glyph>,
+    glyphs: HashMap<(u32, u32), Glyph>,
     program: Program,
     texture_scale: (i32, i32),
     dimensions: (u32, u32),
@@ -53,7 +53,7 @@ impl Console {
             &gl, &res, "shaders/glyph",
         )?;
         let font_bytes = res.load_bytes_from_file("droid-sans-mono.ttf").unwrap();
-        let (font_img, glyph_map, _) = load_bitmap(font_bytes);
+        let (font_img, glyph_map) = load_bitmap(font_bytes);
         let texture_scale_u32 = font_img.dimensions();
         let texture = Texture::from_img(gl, font_img, gl::RGBA)?;
         let glyph_size = (2.0 * screen_size.width as f32 / size.0 as f32, 2.0 * screen_size.height as f32 / size.1 as f32);
@@ -95,7 +95,7 @@ impl Console {
             None => self.default_background
         };
         self.is_dirty.borrow_mut().set(true);
-        self.glyphs.insert(self.coordinates_to_index(x as u32, y as u32), Glyph::new(c, background, foreground, layer));
+        self.glyphs.insert((self.coordinates_to_index(x as u32, y as u32), layer), Glyph::new(c, background, foreground));
     }
 
     fn coordinates_to_index(&self, x: u32, y: u32) -> u32 {
@@ -122,22 +122,23 @@ impl Console {
         for (index, glyph) in self.glyphs.iter() {
             let bounding_box = self.glyph_map.get(&glyph.character).unwrap();
             let scaled_bounding_box = self.bound_box_to_fractional(self.glyph_size);
-            let coordinates = self.coordinates_to_fractional(self.index_to_coordinates(*index));
+            let (index, layer) = *index;
+            let coordinates = self.coordinates_to_fractional(self.index_to_coordinates(index));
             let index_offset = vertices.len() as u32;
             vertices.append(&mut vec![
-                Vertex { position: (scaled_bounding_box.0 + coordinates.0, scaled_bounding_box.1 + coordinates.1, glyph.layer as f32 / 255.0 * -1.0).into(),
+                Vertex { position: (scaled_bounding_box.0 + coordinates.0, scaled_bounding_box.1 + coordinates.1, layer as f32 / 255.0 * -1.0).into(),
                     texture: bounding_box.top_right(self.texture_scale).into(),
                     foreground: glyph.foreground,
                     background: glyph.background},
-                Vertex { position: (scaled_bounding_box.0 + coordinates.0, coordinates.1, glyph.layer as f32 / 255.0  * -1.0 ).into(),
+                Vertex { position: (scaled_bounding_box.0 + coordinates.0, coordinates.1, layer as f32 / 255.0  * -1.0 ).into(),
                     texture: bounding_box.bottom_right(self.texture_scale).into(),
                     foreground: glyph.foreground,
                     background: glyph.background },
-                Vertex { position: (coordinates.0, coordinates.1, glyph.layer as f32 / 255.0 * -1.0).into(),
+                Vertex { position: (coordinates.0, coordinates.1, layer as f32 / 255.0 * -1.0).into(),
                     texture: bounding_box.bottom_left(self.texture_scale).into(),
                     foreground: glyph.foreground,
                     background: glyph.background },
-                Vertex { position: (coordinates.0, scaled_bounding_box.1 + coordinates.1,glyph.layer as f32 / 255.0 * -1.0).into(),
+                Vertex { position: (coordinates.0, scaled_bounding_box.1 + coordinates.1, layer as f32 / 255.0 * -1.0).into(),
                     texture: bounding_box.top_left(self.texture_scale).into(),
                     foreground: glyph.foreground,
                     background: glyph.background },
@@ -165,16 +166,16 @@ impl Console {
     }
 
     pub fn render(&self, gl: &gl::Gl) {
-
+        unsafe {
+            gl.Enable(gl::DEPTH_TEST);
+        }
         if self.is_dirty.borrow().0 {
             let num_glyphs = self.load_gl(&gl);
             self.is_dirty.borrow_mut().set(false);
             self.num_vert.borrow_mut().set(num_glyphs);
         }
         self.program.set_used();
-        unsafe {
-            gl.Disable(gl::DEPTH_TEST);
-        }
+
         self.texture.bind();
 
         self.vao.bind();

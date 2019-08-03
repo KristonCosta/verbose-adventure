@@ -15,6 +15,10 @@ use glutin::{
     Api};
 use crate::game_handler::InputEvent::{KeyPressed, KeyReleased, MouseMoved};
 use failure::_core::time::Duration;
+use std::ops::Add;
+use std::thread;
+use nalgebra::max;
+use num::clamp;
 
 pub const WINDOW_NAME: &str = "Hello Glutin";
 
@@ -108,12 +112,14 @@ impl GameHandler {
         event_loop.run(move |event, _, control_flow| {
             let now = Instant::now();
             let dt = (now - last_frame).as_micros() as f64 / 1_000_000.0;
-          //  println!("FPS: {}", 1.0 / dt);
+            let delay = clamp((now - last_frame).as_millis() , 0, 8);
+            thread::sleep(Duration::from_millis((8 - delay) as u64));
             last_frame = now;
             let mut pending_input = None;
+
             match event {
                 Event::EventsCleared => {
-                    context.window.window().request_redraw();
+                     context.window.window().request_redraw();
                 },
                 Event::WindowEvent {
                     event: WindowEvent::Resized(size),
@@ -198,10 +204,7 @@ impl GameHandler {
                 }
                 _ => *control_flow = ControlFlow::Poll,
             }
-            if let Some(input_event) = pending_input {
-                game.process_input(input_event, &context);
-            }
-            game.update(dt as f32, &context);
+            game.update(pending_input, dt as f32, &context);
         });
     }
 }
