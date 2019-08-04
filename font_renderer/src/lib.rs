@@ -94,7 +94,7 @@ fn prepare_glyphs(data:Vec<u8>, text: &str, height: f32) -> (DynamicImage, Vec<P
 }
 
 pub fn load_bitmap(data: Vec<u8>) -> (DynamicImage, HashMap<char, BoundingBox>) {
-    let text = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ12345567890!@#$%^&*()?<>|";
+    let text = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ12345567890!@#$%^&/\\*()?<>|,.1234567890:-'\"s";
     let height = 100.0;
     let (image, glyphs, (glyphs_width, glyphs_height)) = prepare_glyphs(data, text, height);
 
@@ -103,10 +103,11 @@ pub fn load_bitmap(data: Vec<u8>) -> (DynamicImage, HashMap<char, BoundingBox>) 
 
     for glyph in glyphs.iter() {
         if let Some(bounding_box) = glyph.pixel_bounding_box() {
+
             map.insert(text.chars().nth(counter).unwrap(), BoundingBox{
-                x1: bounding_box.min.x,
+                x1: glyph.position().x as i32,
                 x2: bounding_box.max.x,
-                y1: height as i32 - bounding_box.max.y - 1,
+                y1: 0,
                 y2: height as i32,
             });
         }

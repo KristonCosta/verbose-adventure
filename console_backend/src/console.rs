@@ -27,7 +27,9 @@ pub struct Console {
     program: Program,
     texture_scale: (i32, i32),
     dimensions: (u32, u32),
-    screen_size: LogicalSize,
+    screen_scaling:(f32, f32),
+    height: u32,
+    screen_offset: (f32, f32),
     default_background: data::f32_f32_f32_f32,
 }
 
@@ -48,7 +50,7 @@ impl Dirty {
 }
 
 impl Console {
-    pub fn new(res: &Resources, gl: &gl::Gl, size: (u32, u32), screen_size: LogicalSize, background: data::f32_f32_f32_f32) -> Result<Self, failure::Error> {
+    pub fn new(res: &Resources, gl: &gl::Gl, map_size: (u32, u32), screen_scaling: (f32, f32), screen_offset: (f32, f32), background: data::f32_f32_f32_f32, height: u32) -> Result<Self, failure::Error> {
         let shader_program = render_gl::Program::from_res(
             &gl, &res, "shaders/glyph",
         )?;
@@ -56,7 +58,7 @@ impl Console {
         let (font_img, glyph_map) = load_bitmap(font_bytes);
         let texture_scale_u32 = font_img.dimensions();
         let texture = Texture::from_img(gl, font_img, gl::RGBA)?;
-        let glyph_size = (2.0 * screen_size.width as f32 / size.0 as f32, 2.0 * screen_size.height as f32 / size.1 as f32);
+        let glyph_size = (2.0 / map_size.0 as f32 * screen_scaling.0, 2.0 / map_size.1 as f32 * screen_scaling.1);
         let texture_scale = (texture_scale_u32.0 as i32, texture_scale_u32.1 as i32);
 
         let vao = VertexArray::new(&gl);
@@ -73,10 +75,12 @@ impl Console {
             glyph_map,
             glyph_size,
             texture_scale,
+            height,
             glyphs: HashMap::new(),
             program: shader_program,
-            dimensions: size,
-            screen_size,
+            dimensions: map_size,
+            screen_scaling,
+            screen_offset,
             default_background: background
         })
     }
@@ -107,11 +111,7 @@ impl Console {
     }
 
     fn coordinates_to_fractional(&self, coordinates: (u32, u32)) -> (f32, f32) {
-        ((coordinates.0 as f32 / self.dimensions.0 as f32) * 2.0 - 1.0, (coordinates.1 as f32 / self.dimensions.1 as f32) * 2.0 - 1.0)
-    }
-
-    fn bound_box_to_fractional(&self, coordinates: (f32, f32)) -> (f32, f32) {
-        ((coordinates.0 as f32 / self.screen_size.width as f32), (coordinates.1 as f32 / self.screen_size.height as f32))
+        (((coordinates.0 as f32 / self.dimensions.0 as f32) * 2.0 - 1.0)  * self.screen_scaling.0 + self.screen_offset.0, ((coordinates.1 as f32 / self.dimensions.1 as f32) * 2.0 - 1.0) * self.screen_scaling.1 + self.screen_offset.1 )
     }
 
     fn load_gl(&self, gl: &gl::Gl) -> i32 {
@@ -121,24 +121,26 @@ impl Console {
         let mut num_glyphs = 0;
         for (index, glyph) in self.glyphs.iter() {
             let bounding_box = self.glyph_map.get(&glyph.character).unwrap();
-            let scaled_bounding_box = self.bound_box_to_fractional(self.glyph_size);
+            let scaled_bounding_box = self.glyph_size;
             let (index, layer) = *index;
+            let layer = layer as f32 / 255.0 * -1.0 * self.height as f32;
             let coordinates = self.coordinates_to_fractional(self.index_to_coordinates(index));
             let index_offset = vertices.len() as u32;
+
             vertices.append(&mut vec![
-                Vertex { position: (scaled_bounding_box.0 + coordinates.0, scaled_bounding_box.1 + coordinates.1, layer as f32 / 255.0 * -1.0).into(),
+                Vertex { position: (scaled_bounding_box.0 + coordinates.0, scaled_bounding_box.1 + coordinates.1, layer).into(),
                     texture: bounding_box.top_right(self.texture_scale).into(),
                     foreground: glyph.foreground,
                     background: glyph.background},
-                Vertex { position: (scaled_bounding_box.0 + coordinates.0, coordinates.1, layer as f32 / 255.0  * -1.0 ).into(),
+                Vertex { position: (scaled_bounding_box.0 + coordinates.0, coordinates.1, layer ).into(),
                     texture: bounding_box.bottom_right(self.texture_scale).into(),
                     foreground: glyph.foreground,
                     background: glyph.background },
-                Vertex { position: (coordinates.0, coordinates.1, layer as f32 / 255.0 * -1.0).into(),
+                Vertex { position: (coordinates.0, coordinates.1, layer).into(),
                     texture: bounding_box.bottom_left(self.texture_scale).into(),
                     foreground: glyph.foreground,
                     background: glyph.background },
-                Vertex { position: (coordinates.0, scaled_bounding_box.1 + coordinates.1, layer as f32 / 255.0 * -1.0).into(),
+                Vertex { position: (coordinates.0, scaled_bounding_box.1 + coordinates.1, layer).into(),
                     texture: bounding_box.top_left(self.texture_scale).into(),
                     foreground: glyph.foreground,
                     background: glyph.background },

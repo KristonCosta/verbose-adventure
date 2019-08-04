@@ -1,10 +1,10 @@
 use console_backend::Color;
 use rand::Rng;
 use std::cmp;
-use crate::object::{Object, Fighter, Ai};
+use crate::object::{Object, Fighter, Ai, DeathCallback, Item};
 
-
-const MAX_ROOM_MONSTERS : u32 = 3;
+const MAX_ROOM_ITEMS: u32 = 2;
+const MAX_ROOM_MONSTERS: u32 = 3;
 
 #[derive(Clone, Copy, Debug)]
 pub struct Tile {
@@ -95,7 +95,7 @@ pub fn is_not_blocked(map: &Map, x: i32, y: i32, objects: &[Object]) -> bool {
 }
 
 
-fn place_objects(room: Rect, objects: &mut Vec<Object>) {
+fn place_objects(map: &Map, room: Rect, objects: &mut Vec<Object>) {
     let num_monsters = rand::thread_rng().gen_range(0, MAX_ROOM_MONSTERS + 1);
     let desaturated_green = Color::from_int(25, 125, 35, 1.0);
     let light_green = Color::from_int(90, 165, 30, 1.0);
@@ -110,6 +110,7 @@ fn place_objects(room: Rect, objects: &mut Vec<Object>) {
                 hp: 10,
                 defense: 0,
                 power: 3,
+                on_death: DeathCallback::Monster,
             });
             obj.ai = Some(Ai);
             obj
@@ -120,11 +121,24 @@ fn place_objects(room: Rect, objects: &mut Vec<Object>) {
                 hp: 16,
                 defense: 1,
                 power: 4,
+                on_death: DeathCallback::Monster,
             });
             obj.ai = Some(Ai);
             obj
         };
         objects.push(monster);
+    }
+
+    let num_items = rand::thread_rng().gen_range(0, MAX_ROOM_ITEMS + 1);
+    for _ in 0..num_items {
+        let x = rand::thread_rng().gen_range(room.x1 + 1, room.x2);
+        let y = rand::thread_rng().gen_range(room.y1 + 1, room.y2);
+
+        if is_not_blocked(map, x, y, objects) {
+            let mut object = Object::new((x, y), '!', Color::from_int(160, 65, 255, 1.0), "healing potion",  false);
+            object.item = Some(Item::Heal);
+            objects.push(object);
+        }
     }
 }
 
@@ -150,7 +164,7 @@ pub fn make_map(
             .any(|other_room| new_room.intersects_with(other_room));
         if !failed {
             create_room(new_room, &mut map);
-            place_objects(new_room, objects);
+            place_objects(&map, new_room, objects);
             let (new_x, new_y) = new_room.center();
             if rooms.is_empty() {
                 starting_position = (new_x, new_y);

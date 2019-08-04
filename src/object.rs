@@ -1,6 +1,7 @@
 use console_backend::Color;
 use crate::map::{Map, move_by};
 use std::cmp;
+use crate::scrolling_message_console::ScrollingMessageConsole;
 
 pub fn mut_two<T>(first_index: usize, second_index: usize, items: &mut [T]) -> (&mut T, &mut T) {
     assert_ne!(first_index, second_index);
@@ -13,6 +14,10 @@ pub fn mut_two<T>(first_index: usize, second_index: usize, items: &mut [T]) -> (
     }
 }
 
+#[derive(Debug)]
+pub enum Item {
+    Heal,
+}
 
 #[derive(Debug)]
 pub struct Object {
@@ -23,7 +28,8 @@ pub struct Object {
     pub blocks: bool,
     pub alive: bool,
     pub fighter: Option<Fighter>,
-    pub ai: Option<Ai>
+    pub ai: Option<Ai>,
+    pub item: Option<Item>,
 }
 
 impl Object {
@@ -37,6 +43,7 @@ impl Object {
             alive: true,
             fighter: None,
             ai: None,
+            item: None,
         }
     }
 
@@ -51,21 +58,26 @@ impl Object {
                 fighter.hp -= damage;
             }
         }
+        if let Some(fighter) = self.fighter {
+            if fighter.hp <= 0 {
+                self.alive = false;
+                fighter.on_death.callback(self);
+            }
+        }
     }
 
-    pub fn attack(&self, target: &mut Object) {
+    pub fn attack(&self, target: &mut Object, messages: &mut ScrollingMessageConsole) {
         let damage = self.fighter.map_or(0, |f| f.power) - target.fighter.map_or(0, |f| f.defense);
         if damage > 0 {
-            println!(
+            messages.add_message(format!(
                 "{} attacks {} for {} hit points.",
-                self.name, target.name, damage
-            );
+                self.name, target.name, damage).as_str());
             target.take_damage(damage);
         } else {
-            println!(
+            messages.add_message(format!(
                 "{} attacks {} but it has no effect!",
                 self.name, target.name
-            );
+            ).as_str());
         }
     }
 }
@@ -76,6 +88,7 @@ pub struct Fighter {
     pub hp: i32,
     pub defense: i32,
     pub power: i32,
+    pub on_death: DeathCallback,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -89,14 +102,48 @@ fn move_towards(id: usize, target_x: i32, target_y: i32, map: &Map, objects: &mu
     move_by(id, dx, dy, map, objects);
 }
 
-pub fn ai_take_turn(monster_id: usize, map: &Map, mut objects: &mut [Object], fov_map: bool) {
+pub fn ai_take_turn(monster_id: usize, map: &Map, mut objects: &mut [Object], fov_map: bool, messages: &mut ScrollingMessageConsole) {
     let (x, y) = objects[monster_id].position;
     if objects[monster_id].distance_to(&objects[0]) >= 2.0 {
         let (player_x, player_y) = objects[0].position;
         move_towards(monster_id, player_x, player_y, map, objects);
     } else if objects[0].fighter.map_or(false, |f| f.hp > 0) {
         let (monster, player) = mut_two(monster_id, 0, &mut objects);
-        monster.attack(player);
+        monster.attack(player, messages);
     }
 }
 
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum DeathCallback {
+    Player,
+    Monster
+}
+impl DeathCallback {
+    fn callback(self, object: &mut Object) {
+        use DeathCallback::*;
+        let callback: fn(&mut Object) = match self {
+            Player => player_death,
+            Monster => monster_death,
+        };
+        callback(object);
+    }
+}
+
+fn player_death(player: &mut Object) {
+    println!("You died!");
+
+    player.glyph = '%';
+    player.color = Color::from_int(120, 30, 30, 1.0);
+}
+
+fn monster_death(monster: &mut Object) {
+    println!("{} is dead!", monster.name);
+
+    monster.glyph = '%';
+    monster.color = Color::from_int(120, 30, 30, 1.0);
+    monster.blocks = false;
+    monster.fighter = None;
+    monster.ai = None;
+    monster.name = format!("remains of {}", monster.name);
+
+}

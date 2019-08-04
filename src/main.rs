@@ -1,4 +1,5 @@
 #![feature(duration_float)]
+#[macro_use] extern crate lazy_static;
 extern crate nalgebra;
 extern crate nalgebra_glm;
 extern crate image;
@@ -7,11 +8,14 @@ extern crate tobj;
 extern crate num;
 extern crate console_backend;
 
+
+mod scrolling_message_console;
 mod game;
 mod game_handler;
 mod map;
 mod object;
 mod debug;
+mod theme;
 
 use crate::debug::failure_to_string;
 
