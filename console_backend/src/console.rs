@@ -15,19 +15,22 @@ use glutin::{
 use core::ptr;
 use crate::color::colors;
 
+
 pub enum Transformer {
     AspectRatio(f32, f32),
 }
 
 impl Transformer {
-    pub fn apply(&self, console: &mut Console) {
+    pub fn apply(&self, console: &mut Console) -> &Self {
         match self {
             Transformer::AspectRatio(desired, actual ) => Transformer::apply_aspect_ratio(console, *desired, *actual)
         }
+        self
     }
 
     fn apply_aspect_ratio(console: &mut Console, desired: f32, actual: f32) {
         // x / y = desired   cx / cy = actual  y/desired = cy/actual, y = cy * desired/actual
+        console.scale_modifier = (1.0, 1.0);
         if desired > actual {
             console.scale_modifier.1 = actual / desired;
         } else {

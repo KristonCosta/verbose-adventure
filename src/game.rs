@@ -123,7 +123,12 @@ impl GameImpl {
         }
     }
 
-
+    fn set_window_ratios(&mut self, size: LogicalSize) {
+        Transformer::AspectRatio(16.0 / 10.0, (size.width / size.height) as f32)
+            .apply(&mut self.console)
+            .apply(&mut self.console_term)
+            .apply(&mut self.message_log.console);
+    }
 }
 
 impl Game for GameImpl  {
@@ -159,7 +164,7 @@ impl Game for GameImpl  {
         let console_message_log = ConsoleBuilder::new((map_size.0 + 20, 10))
                 .scale((1.0, 0.25))
                 .background(*theme::BACKGROUND)
-                .layer(3)
+                .layer(1)
                 .build(&res, &context.gl)
                 .unwrap();
 
@@ -171,7 +176,7 @@ impl Game for GameImpl  {
 
         let (map, player_pos) = make_map(map_size.0 as usize, map_size.1 as usize, 15, 5, 20, &mut objects);
         let player = &mut objects[0];
-        // let font_context = CanvasFontContext::
+
         player.position = player_pos;
         player.fighter = Some(Fighter {
             max_hp: 30,
@@ -180,7 +185,7 @@ impl Game for GameImpl  {
             power: 5,
             on_death: DeathCallback::Player,
         });
-        GameImpl {
+        let mut game = GameImpl {
             color_buffer,
             camera,
             console,
@@ -191,11 +196,17 @@ impl Game for GameImpl  {
             inventory: vec![],
             keyboard:input_map,
             input_limiter: Instant::now(),
-        }
+        };
+        game.set_window_ratios(size);
+        game
     }
 
     fn render(&mut self, context: &GameContext) {
         let gl = &context.gl;
+        unsafe {
+          //  gl.PolygonMode( gl::FRONT_AND_BACK, gl::LINE );
+
+        }
         self.color_buffer.clear(&gl);
         self.console.clear();
         for x in 0..self.map.len() {
@@ -247,6 +258,6 @@ impl Game for GameImpl  {
     }
 
     fn resize(&mut self, size: LogicalSize) {
-        Transformer::AspectRatio(16.0 / 9.0, (size.width / size.height) as f32).apply(&mut self.console);
+        self.set_window_ratios(size);
     }
 }

@@ -5,7 +5,7 @@ use crate::theme::theme;
 
 pub struct ScrollingMessageConsole {
     messages: VecDeque<(String, Color)>,
-    console: Console,
+    pub console: Console,
     height: u32,
 }
 
