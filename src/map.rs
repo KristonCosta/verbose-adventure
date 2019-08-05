@@ -2,6 +2,7 @@ use console_backend::Color;
 use rand::Rng;
 use std::cmp;
 use crate::object::{Object, Fighter, Ai, DeathCallback, Item};
+use crate::theme::theme;
 
 const MAX_ROOM_ITEMS: u32 = 2;
 const MAX_ROOM_MONSTERS: u32 = 3;
@@ -97,14 +98,12 @@ pub fn is_not_blocked(map: &Map, x: i32, y: i32, objects: &[Object]) -> bool {
 
 fn place_objects(map: &Map, room: Rect, objects: &mut Vec<Object>) {
     let num_monsters = rand::thread_rng().gen_range(0, MAX_ROOM_MONSTERS + 1);
-    let desaturated_green = Color::from_int(25, 125, 35, 1.0);
-    let light_green = Color::from_int(90, 165, 30, 1.0);
     for _ in 0..num_monsters {
         let x = rand::thread_rng().gen_range(room.x1 + 1, room.x2);
         let y = rand::thread_rng().gen_range(room.y1 + 1, room.y2);
 
         let monster = if rand::random::<f32>() < 0.8 {
-            let mut obj = Object::new((x, y), 'o', desaturated_green, "orc", true);
+            let mut obj = Object::new((x, y), 'o', *theme::ORC, "orc", true);
             obj.fighter = Some(Fighter {
                 max_hp: 10,
                 hp: 10,
@@ -115,7 +114,7 @@ fn place_objects(map: &Map, room: Rect, objects: &mut Vec<Object>) {
             obj.ai = Some(Ai);
             obj
         } else {
-            let mut obj = Object::new((x, y), 'T', light_green, "troll", true);
+            let mut obj = Object::new((x, y), 'T', *theme::TROLL, "troll", true);
             obj.fighter = Some(Fighter {
                 max_hp: 16,
                 hp: 16,
@@ -135,7 +134,7 @@ fn place_objects(map: &Map, room: Rect, objects: &mut Vec<Object>) {
         let y = rand::thread_rng().gen_range(room.y1 + 1, room.y2);
 
         if is_not_blocked(map, x, y, objects) {
-            let mut object = Object::new((x, y), '!', Color::from_int(160, 65, 255, 1.0), "healing potion",  false);
+            let mut object = Object::new((x, y), '!', *theme::HEALING_ITEM, "healing potion",  false);
             object.item = Some(Item::Heal);
             objects.push(object);
         }

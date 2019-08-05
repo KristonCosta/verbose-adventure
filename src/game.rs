@@ -8,15 +8,7 @@ use glutin::{
 
 use nalgebra_glm::Vec3;
 
-use console_backend::{
-    ColorBuffer,
-    Camera,
-    resources::Resources,
-    Console,
-    data,
-    Color,
-    colors,
-};
+use console_backend::{ColorBuffer, Camera, resources::Resources, Console, data, Color, colors, ConsoleBuilder, Transformer};
 
 use std::path::Path;
 use std::collections::HashMap;
@@ -32,6 +24,7 @@ pub trait Game {
     fn new(context: &GameContext, size: LogicalSize) -> Self;
     fn render(&mut self, context: &GameContext);
     fn update(&mut self, pending_input: Option<InputEvent>, _dt: f32, _context: &GameContext);
+    fn resize(&mut self, size: LogicalSize);
     // fn process_input(&mut self, pending_input: InputEvent, context: &GameContext);
 }
 
@@ -146,9 +139,30 @@ impl Game for GameImpl  {
 
         let camera = Camera::new(size, Vec3::new(0.0, 0.0, 3.0), Vec3::new(0.0, 0.0, 0.0), &window);
         let map_size = (100, 40);
-        let console = Console::new(&res, &context.gl, map_size, (1.0, 0.75), (0.0, 0.25), *theme::BACKGROUND, 1).unwrap();
-        let console_term = Console::new(&res, &context.gl, (15, 8), (0.2, 0.15), (-0.8, 0.85), *theme::BACKGROUND, 2).unwrap();
-        let console_message_log = Console::new(&res, &context.gl, (map_size.0 + 20, 10), (1.0, 0.25), (0.0, -0.75), *theme::BACKGROUND, 3).unwrap();
+        let console = ConsoleBuilder::new(map_size)
+            .scale((1.0, 0.75))
+            .top_align()
+            .background(*theme::BACKGROUND)
+            .layer(1)
+            .build(&res, &context.gl)
+            .unwrap();
+
+        let console_term = ConsoleBuilder::new((15, 8))
+            .scale((0.2, 0.15))
+            .top_align()
+            .right_align()
+            .background(*theme::BACKGROUND)
+            .layer(2)
+            .build(&res, &context.gl)
+            .unwrap();
+
+        let console_message_log = ConsoleBuilder::new((map_size.0 + 20, 10))
+                .scale((1.0, 0.25))
+                .background(*theme::BACKGROUND)
+                .layer(3)
+                .build(&res, &context.gl)
+                .unwrap();
+
         let mut message_log = ScrollingMessageConsole::new(console_message_log, 10);
         message_log.add_colored_message("Oh man this is spooky.", *theme::RED_ALERT_TEXT);
         let input_map: HashMap<VirtualKeyCode, bool> = [].iter().cloned().collect();
@@ -230,5 +244,9 @@ impl Game for GameImpl  {
                 }
             }
         }
+    }
+
+    fn resize(&mut self, size: LogicalSize) {
+        Transformer::AspectRatio(16.0 / 9.0, (size.width / size.height) as f32).apply(&mut self.console);
     }
 }

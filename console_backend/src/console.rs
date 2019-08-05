@@ -1,6 +1,6 @@
 use crate::resources::Resources;
 use font_renderer::{load_bitmap, BoundingBox};
-use crate::render_gl;
+use crate::{render_gl, Color};
 use image::GenericImageView;
 use crate::render_gl::texture::Texture;
 use crate::render_gl::buffer::{VertexArray, ArrayBuffer, ElementArrayBuffer};
@@ -13,6 +13,29 @@ use glutin::{
     dpi::LogicalSize,
 };
 use core::ptr;
+use crate::color::colors;
+
+pub enum Transformer {
+    AspectRatio(f32, f32),
+}
+
+impl Transformer {
+    pub fn apply(&self, console: &mut Console) {
+        match self {
+            Transformer::AspectRatio(desired, actual ) => Transformer::apply_aspect_ratio(console, *desired, *actual)
+        }
+    }
+
+    fn apply_aspect_ratio(console: &mut Console, desired: f32, actual: f32) {
+        // x / y = desired   cx / cy = actual  y/desired = cy/actual, y = cy * desired/actual
+        if desired > actual {
+            console.scale_modifier.1 = actual / desired;
+        } else {
+            console.scale_modifier.0 = desired / actual;
+        }
+        println!("Changed scaling to {:?}", console.scale_modifier);
+    }
+}
 
 pub struct Console {
     is_dirty: RefCell<Dirty>,
@@ -21,7 +44,6 @@ pub struct Console {
     vbo: ArrayBuffer,
     ebo: ElementArrayBuffer,
     texture: Texture,
-    glyph_size: (f32, f32),
     glyph_map: HashMap<char, BoundingBox>,
     glyphs: HashMap<(u32, u32), Glyph>,
     program: Program,
@@ -31,6 +53,7 @@ pub struct Console {
     height: u32,
     screen_offset: (f32, f32),
     default_background: data::f32_f32_f32_f32,
+    scale_modifier: (f32, f32),
 }
 
 struct Num(i32);
@@ -49,8 +72,94 @@ impl Dirty {
     }
 }
 
+pub struct ConsoleBuilder {
+    size: (u32, u32),
+    scale: (f32, f32),
+    offset: (f32, f32),
+    layer: u32,
+    background: Color,
+    font: String,
+}
+
+impl ConsoleBuilder {
+    pub fn new(size: (u32, u32)) -> Self {
+        ConsoleBuilder {
+            size,
+            scale: (1.0, 1.0),
+            offset: (0.0, 0.0),
+            layer: 1,
+            background: *colors::BLACK,
+            font: "droid-sans-mono.ttf".to_string(),
+        }
+    }
+
+    pub fn scale(&mut self, scale: (f32, f32)) -> &mut Self {
+        self.scale = scale;
+        self
+    }
+
+    pub fn hscale(&mut self, scale: f32) -> &mut Self {
+        self.scale.0 = scale;
+        self
+    }
+
+    pub fn vscale(&mut self, scale: f32) -> &mut Self {
+        self.scale.1 = scale;
+        self
+    }
+
+    // relative to bottom left
+    pub fn offset(&mut self, offset: (f32, f32)) -> &mut Self {
+        self.offset = offset;
+        self
+    }
+
+    pub fn layer(&mut self, layer: u32) -> &mut Self {
+        self.layer = layer;
+        self
+    }
+
+    pub fn background(&mut self, background: Color) -> &mut Self {
+        self.background = background;
+        self
+    }
+
+    pub fn font(&mut self, font: &str) -> &mut Self {
+        self.font = font.to_string();
+        self
+    }
+
+    pub fn top_align(&mut self) -> &mut Self {
+        self.offset = (self.offset.0, (1.0 - self.scale.1) * 2.0);
+        self
+    }
+
+    pub fn left_align(&mut self) -> &mut Self {
+        self.offset = ((1.0 - self.scale.0) * 2.0, self.offset.1);
+        self
+    }
+
+    pub fn right_align(&mut self) -> &mut Self {
+        self.offset = ((1.0 + 3.0 * self.scale.0), self.offset.1);
+        self
+    }
+
+    pub fn build(&self, res: &Resources, gl: &gl::Gl) -> Result<Console, failure::Error> {
+        // Left bias the offset
+        let offset = (self.offset.0 - (1.0 - self.scale.0), self.offset.1 - (1.0 - self.scale.1));
+        println!("Calculated offset {:?}", offset);
+        Console::new(res, gl, self.size, self.scale, offset, self.background, self.layer)
+    }
+}
+
 impl Console {
-    pub fn new(res: &Resources, gl: &gl::Gl, map_size: (u32, u32), screen_scaling: (f32, f32), screen_offset: (f32, f32), background: data::f32_f32_f32_f32, height: u32) -> Result<Self, failure::Error> {
+    pub fn new(res: &Resources,
+               gl: &gl::Gl,
+               map_size: (u32, u32),
+               screen_scaling: (f32, f32),
+               screen_offset: (f32, f32),
+               background: Color,
+               height: u32) -> Result<Self, failure::Error> {
         let shader_program = render_gl::Program::from_res(
             &gl, &res, "shaders/glyph",
         )?;
@@ -58,7 +167,6 @@ impl Console {
         let (font_img, glyph_map) = load_bitmap(font_bytes);
         let texture_scale_u32 = font_img.dimensions();
         let texture = Texture::from_img(gl, font_img, gl::RGBA)?;
-        let glyph_size = (2.0 / map_size.0 as f32 * screen_scaling.0, 2.0 / map_size.1 as f32 * screen_scaling.1);
         let texture_scale = (texture_scale_u32.0 as i32, texture_scale_u32.1 as i32);
 
         let vao = VertexArray::new(&gl);
@@ -73,7 +181,6 @@ impl Console {
             ebo,
             texture,
             glyph_map,
-            glyph_size,
             texture_scale,
             height,
             glyphs: HashMap::new(),
@@ -81,7 +188,8 @@ impl Console {
             dimensions: map_size,
             screen_scaling,
             screen_offset,
-            default_background: background
+            default_background: background,
+            scale_modifier: (1.0, 1.0)
         })
     }
 
@@ -102,6 +210,10 @@ impl Console {
         self.glyphs.insert((self.coordinates_to_index(x as u32, y as u32), layer), Glyph::new(c, background, foreground));
     }
 
+    fn glyph_size(&self) -> (f32, f32) {
+        (2.0 / self.dimensions.0 as f32 * self.screen_scaling.0 * self.scale_modifier.0, 2.0 / self.dimensions.1 as f32 * self.screen_scaling.1 * self.scale_modifier.1)
+    }
+
     fn coordinates_to_index(&self, x: u32, y: u32) -> u32 {
         x + y * self.dimensions.0
     }
@@ -111,7 +223,8 @@ impl Console {
     }
 
     fn coordinates_to_fractional(&self, coordinates: (u32, u32)) -> (f32, f32) {
-        (((coordinates.0 as f32 / self.dimensions.0 as f32) * 2.0 - 1.0)  * self.screen_scaling.0 + self.screen_offset.0, ((coordinates.1 as f32 / self.dimensions.1 as f32) * 2.0 - 1.0) * self.screen_scaling.1 + self.screen_offset.1 )
+        (((coordinates.0 as f32 / self.dimensions.0 as f32) * 2.0 - 1.0)  * self.screen_scaling.0 * self.scale_modifier.0 + self.screen_offset.0,
+         ((coordinates.1 as f32 / self.dimensions.1 as f32) * 2.0 - 1.0) * self.screen_scaling.1 * self.scale_modifier.1 + self.screen_offset.1 )
     }
 
     fn load_gl(&self, gl: &gl::Gl) -> i32 {
@@ -121,7 +234,7 @@ impl Console {
         let mut num_glyphs = 0;
         for (index, glyph) in self.glyphs.iter() {
             let bounding_box = self.glyph_map.get(&glyph.character).unwrap();
-            let scaled_bounding_box = self.glyph_size;
+            let scaled_bounding_box = self.glyph_size();
             let (index, layer) = *index;
             let layer = layer as f32 / 255.0 * -1.0 * self.height as f32;
             let coordinates = self.coordinates_to_fractional(self.index_to_coordinates(index));
@@ -165,6 +278,10 @@ impl Console {
         self.vao.unbind();
         self.ebo.unbind();
         num_glyphs
+    }
+
+    fn set_scaling_modifier(&mut self, modifier: (f32, f32)) {
+
     }
 
     pub fn render(&self, gl: &gl::Gl) {

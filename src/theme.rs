@@ -4,6 +4,7 @@ pub mod theme {
         Color,
         colors,
     };
+    // TODO: MOVE THIS INTO A CONFIG
     lazy_static! {
         pub static ref BACKGROUND: Color = *colors::BLACK;
         pub static ref COLOR_DARK_WALL: Color = *colors::NAVY;
@@ -13,6 +14,8 @@ pub mod theme {
         pub static ref REGULAR_ALERT_TEXT: Color = *colors::WHITE;
         pub static ref PLAYER: Color = *colors::WHITE;
         pub static ref BLOOD: Color = *colors::RED;
-
+        pub static ref TROLL: Color = *colors::DESATURATED_GREEN;
+        pub static ref ORC: Color = *colors::LIGHT_GREEN;
+        pub static ref HEALING_ITEM: Color = *colors::LIGHT_SLATE_BLUE;
     }
 }

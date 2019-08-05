@@ -10,7 +10,12 @@ pub mod resources;
 mod render_gl;
 
 pub use render_gl::data;
-pub use console::Console;
+pub use console::{
+    Console,
+    ConsoleBuilder,
+    Transformer,
+};
+
 pub use color::{Color, colors};
 pub use glyph::Glyph;
 pub use render_gl::{

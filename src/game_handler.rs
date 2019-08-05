@@ -126,6 +126,7 @@ impl GameHandler {
                     ..
                 } => {
                     let window: &Window = context.window.window();
+                    game.resize(size);
                     let size = size.to_physical(window.hidpi_factor());
                     context.window.resize(size);
                 },
