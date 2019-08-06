@@ -110,15 +110,17 @@ fn move_towards(id: usize, target_x: i32, target_y: i32, map: &Map, objects: &mu
     move_by(id, dx, dy, map, objects);
 }
 
-pub fn ai_take_turn(monster_id: usize, map: &Map, mut objects: &mut [Object], fov_map: bool, messages: &mut ScrollingMessageConsole) {
+pub fn ai_take_turn(monster_id: usize, map: &Map, mut objects: &mut [Object], fov_map: bool, messages: &mut ScrollingMessageConsole) -> bool {
     let (x, y) = objects[monster_id].position;
     if objects[monster_id].distance_to(&objects[0]) >= 2.0 {
         let (player_x, player_y) = objects[0].position;
         move_towards(monster_id, player_x, player_y, map, objects);
+        return true
     } else if objects[0].fighter.map_or(false, |f| f.hp > 0) {
         let (monster, player) = mut_two(monster_id, 0, &mut objects);
         monster.attack(player, messages);
     }
+    false
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]

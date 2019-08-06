@@ -372,7 +372,10 @@ impl Game for GameImpl  {
             if action == PlayerAction::TookTurn {
                 for id in 1..self.objects.len() {
                     if self.objects[id].ai.is_some() {
-                        ai_take_turn(id, &self.map, &mut self.objects, true, &mut self.message_log);
+                        let has_moved = ai_take_turn(id, &self.map, &mut self.objects, true, &mut self.message_log);
+                        if has_moved {
+                            self.has_moved = true;
+                        }
                     }
                 }
             }
