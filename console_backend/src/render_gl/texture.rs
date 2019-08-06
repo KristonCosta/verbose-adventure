@@ -4,6 +4,7 @@ use crate::render_gl::errors::Error;
 use gl::Gl;
 use failure::_core::ffi::c_void;
 
+#[derive(Clone)]
 pub struct Texture {
     texture:  gl::types::GLuint,
     gl: Gl,

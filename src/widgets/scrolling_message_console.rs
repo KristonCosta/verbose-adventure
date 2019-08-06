@@ -30,9 +30,10 @@ impl ScrollingMessageConsole {
                 self.messages.pop_front();
             }
         }
+        self.refresh_buffer();
     }
 
-    pub fn render(&mut self, gl: &gl::Gl) {
+    pub fn refresh_buffer(&mut self) {
         let clear: Color = Color::from_int(0, 0, 0, 0.0);
         self.console.clear();
         let mut current_height: i32 = (self.height - 1) as i32;
@@ -44,6 +45,9 @@ impl ScrollingMessageConsole {
             }
             current_height -= 1;
         }
+    }
+
+    pub fn render(&mut self, gl: &gl::Gl) {
         self.console.render(&gl);
     }
 }

@@ -1,7 +1,7 @@
 use crate::resources::Resources;
 use font_renderer::{load_bitmap, BoundingBox};
 use crate::{render_gl, Color};
-use image::GenericImageView;
+use image::{GenericImageView, DynamicImage};
 use crate::render_gl::texture::Texture;
 use crate::render_gl::buffer::{VertexArray, ArrayBuffer, ElementArrayBuffer};
 use std::collections::HashMap;
@@ -15,7 +15,6 @@ use glutin::{
 use core::ptr;
 use crate::color::colors;
 use nalgebra_glm::scale;
-
 
 pub enum Transformer {
     AspectRatio(f32, f32),
@@ -41,17 +40,22 @@ impl Transformer {
     }
 }
 
+#[derive(Clone)]
+struct FontInfo {
+    texture: Texture,
+    glyph_map: HashMap<char, BoundingBox>,
+    texture_scale: (i32, i32),
+}
+
 pub struct Console {
     is_dirty: RefCell<Dirty>,
     num_vert: RefCell<Num>,
     vao: VertexArray,
     vbo: ArrayBuffer,
     ebo: ElementArrayBuffer,
-    texture: Texture,
-    glyph_map: HashMap<char, BoundingBox>,
+    font_info: FontInfo,
     glyphs: HashMap<(u32, u32), Glyph>,
     program: Program,
-    texture_scale: (i32, i32),
     dimensions: (u32, u32),
     screen_scaling:(f32, f32),
     height: u32,
@@ -90,10 +94,12 @@ pub struct ConsoleBuilder {
     font: String,
     relative: Option<RelativeConsole>,
     centered: bool,
+    font_size: Option<(f32, f32)>,
+    font_info: Option<FontInfo>,
 }
 
 impl ConsoleBuilder {
-    pub fn new(size: (u32, u32)) -> Self {
+    pub fn with_dimensions(size: (u32, u32)) -> Self {
         ConsoleBuilder {
             size,
             scale: (1.0, 1.0),
@@ -103,21 +109,58 @@ impl ConsoleBuilder {
             font: "droid-sans-mono.ttf".to_string(),
             relative: None,
             centered: false,
+            font_size: None,
+            font_info: None,
+        }
+    }
+
+    pub fn with_font_size(size: (f32, f32)) -> Self {
+        ConsoleBuilder {
+            size: ((1.0 / size.0) as u32 , (1.0 / size.1) as u32),
+            scale: (1.0, 1.0),
+            offset: (0.0, 0.0),
+            layer: 1,
+            background: *colors::BLACK,
+            font: "droid-sans-mono.ttf".to_string(),
+            relative: None,
+            centered: false,
+            font_size: Some(size),
+            font_info: None,
+        }
+    }
+
+    pub fn with_dimensions_and_font_size(dimensions: (u32, u32), font_size: (f32, f32)) -> Self {
+        ConsoleBuilder {
+            size: dimensions,
+            scale: (font_size.0 * dimensions.0 as f32, font_size.1 * dimensions.1 as f32),
+            offset: (0.0, 0.0),
+            layer: 1,
+            background: *colors::BLACK,
+            font: "droid-sans-mono.ttf".to_string(),
+            relative: None,
+            centered: false,
+            font_size: Some(font_size),
+            font_info: None,
         }
     }
 
     pub fn scale(&mut self, scale: (f32, f32)) -> &mut Self {
+        self.size = match self.font_size {
+            None => self.size,
+            Some(size) => ((scale.0 / size.0) as u32, (scale.1 / size.1) as u32)
+        };
         self.scale = scale;
+        println!("Changing scale to: {:?}", self.scale);
         self
     }
 
     pub fn hscale(&mut self, scale: f32) -> &mut Self {
-        self.scale.0 = scale;
+        self.scale((scale, self.scale.1));
         self
     }
 
     pub fn vscale(&mut self, scale: f32) -> &mut Self {
-        self.scale.1 = scale;
+        self.scale((self.scale.0, scale));
         self
     }
 
@@ -173,6 +216,11 @@ impl ConsoleBuilder {
         self
     }
 
+    pub fn font_from(&mut self, console: &Console) -> &mut Self {
+        self.font_info = Some(console.font_info.clone());
+        self
+    }
+
     pub fn build(&self, res: &Resources, gl: &gl::Gl) -> Result<Console, failure::Error> {
         // Left bias the offset
         let offset = if self.centered {
@@ -181,33 +229,45 @@ impl ConsoleBuilder {
             (self.offset.0 - (1.0 - self.scale.0), self.offset.1 - (1.0 - self.scale.1))
         };
         match &self.relative {
-            None => Console::new(res, gl, self.size, self.scale, offset, self.background, self.layer),
+            None => Console::new(res, gl, self.size, self.scale, offset, self.background, self.layer, self.font_info.clone()),
             Some(relative) => {
                 let offset = (offset.0 + relative.offset.0, offset.1 + relative.offset.1);
                 let scale = (self.scale.0 * relative.scale.0, self.scale.1 * relative.scale.1);
                 println!("Blak to {:?} {:?}", offset, scale);
-                Console::new(res, gl, self.size, scale, offset, self.background, self.layer)
+                Console::new(res, gl, self.size, scale, offset, self.background, self.layer, self.font_info.clone())
             }
         }
     }
 }
 
 impl Console {
-    pub fn new(res: &Resources,
+    fn new(res: &Resources,
                gl: &gl::Gl,
                map_size: (u32, u32),
                screen_scaling: (f32, f32),
                screen_offset: (f32, f32),
                background: Color,
-               height: u32) -> Result<Self, failure::Error> {
+               height: u32,
+               font: Option<FontInfo>) -> Result<Self, failure::Error> {
         let shader_program = render_gl::Program::from_res(
             &gl, &res, "shaders/glyph",
         )?;
-        let font_bytes = res.load_bytes_from_file("droid-sans-mono.ttf").unwrap();
-        let (font_img, glyph_map) = load_bitmap(font_bytes);
-        let texture_scale_u32 = font_img.dimensions();
-        let texture = Texture::from_img(gl, font_img, gl::RGBA)?;
-        let texture_scale = (texture_scale_u32.0 as i32, texture_scale_u32.1 as i32);
+
+        let font_info = match font {
+            Some(font) => font,
+            None => {
+                let font_bytes = res.load_bytes_from_file("droid-sans-mono.ttf").unwrap();
+                let (font_img, glyph_map) = load_bitmap(font_bytes);
+                let texture_scale_u32 = font_img.dimensions();
+                let texture = Texture::from_img(gl, font_img, gl::RGBA)?;
+                let texture_scale = (texture_scale_u32.0 as i32, texture_scale_u32.1 as i32);
+                FontInfo {
+                    glyph_map,
+                    texture_scale,
+                    texture,
+                }
+            }
+        };
 
         let vao = VertexArray::new(&gl);
         let vbo = ArrayBuffer::new(&gl);
@@ -219,9 +279,7 @@ impl Console {
             vao,
             vbo,
             ebo,
-            texture,
-            glyph_map,
-            texture_scale,
+            font_info,
             height,
             glyphs: HashMap::new(),
             program: shader_program,
@@ -233,9 +291,23 @@ impl Console {
         })
     }
 
+    pub fn fill_background(&mut self, background: Color) {
+        for x in 0..self.dimensions.0 {
+            for y in 0..self.dimensions.1 {
+                self.put_char(' ', x as i32, y as i32, background, Some(background), 1);
+            }
+        }
+    }
+
     pub fn clear(&mut self) {
         self.glyphs.clear();
         self.is_dirty.borrow_mut().set(true);
+    }
+
+    pub fn put_text(&mut self, text: &String, x: i32, y: i32,foreground: data::f32_f32_f32_f32, background: Option<data::f32_f32_f32_f32>, layer: u32) {
+        for (index, c) in text.chars().enumerate() {
+            self.put_char(c, x + index as i32, y, foreground, background, layer);
+        }
     }
 
     pub fn put_char(&mut self, c: char, x: i32, y: i32, foreground: data::f32_f32_f32_f32, background: Option<data::f32_f32_f32_f32>, layer: u32) {
@@ -273,7 +345,7 @@ impl Console {
 
         let mut num_glyphs = 0;
         for (index, glyph) in self.glyphs.iter() {
-            let bounding_box = self.glyph_map.get(&glyph.character).unwrap();
+            let bounding_box = self.font_info.glyph_map.get(&glyph.character).unwrap();
             let scaled_bounding_box = self.glyph_size();
             let (index, layer) = *index;
             let layer = layer as f32 / 255.0 * -1.0 * self.height as f32;
@@ -282,19 +354,19 @@ impl Console {
 
             vertices.append(&mut vec![
                 Vertex { position: (scaled_bounding_box.0 + coordinates.0, scaled_bounding_box.1 + coordinates.1, layer).into(),
-                    texture: bounding_box.top_right(self.texture_scale).into(),
+                    texture: bounding_box.top_right(self.font_info.texture_scale).into(),
                     foreground: glyph.foreground,
                     background: glyph.background},
                 Vertex { position: (scaled_bounding_box.0 + coordinates.0, coordinates.1, layer ).into(),
-                    texture: bounding_box.bottom_right(self.texture_scale).into(),
+                    texture: bounding_box.bottom_right(self.font_info.texture_scale).into(),
                     foreground: glyph.foreground,
                     background: glyph.background },
                 Vertex { position: (coordinates.0, coordinates.1, layer).into(),
-                    texture: bounding_box.bottom_left(self.texture_scale).into(),
+                    texture: bounding_box.bottom_left(self.font_info.texture_scale).into(),
                     foreground: glyph.foreground,
                     background: glyph.background },
                 Vertex { position: (coordinates.0, scaled_bounding_box.1 + coordinates.1, layer).into(),
-                    texture: bounding_box.top_left(self.texture_scale).into(),
+                    texture: bounding_box.top_left(self.font_info.texture_scale).into(),
                     foreground: glyph.foreground,
                     background: glyph.background },
             ]);
@@ -335,7 +407,7 @@ impl Console {
         }
         self.program.set_used();
 
-        self.texture.bind();
+        self.font_info.texture.bind();
 
         self.vao.bind();
         unsafe {

@@ -2,7 +2,7 @@ use image::{DynamicImage, Rgba, RgbaImage};
 use rusttype::{point, Font, Scale, PositionedGlyph};
 use std::collections::HashMap;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct BoundingBox {
     x1: i32,
     x2: i32,

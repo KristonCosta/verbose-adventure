@@ -1,7 +1,8 @@
 use console_backend::Color;
 use crate::map::{Map, move_by};
 use std::cmp;
-use crate::scrolling_message_console::ScrollingMessageConsole;
+use crate::widgets::scrolling_message_console::ScrollingMessageConsole;
+use num::clamp;
 
 pub fn mut_two<T>(first_index: usize, second_index: usize, items: &mut [T]) -> (&mut T, &mut T) {
     assert_ne!(first_index, second_index);
@@ -78,6 +79,12 @@ impl Object {
                 "{} attacks {} but it has no effect!",
                 self.name, target.name
             ).as_str());
+        }
+    }
+
+    pub fn heal(&mut self, amount: i32) {
+        if let Some(ref mut fighter) = self.fighter {
+            fighter.hp = clamp(fighter.hp + amount, 0, fighter.max_hp);
         }
     }
 }

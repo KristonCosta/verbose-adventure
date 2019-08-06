@@ -9,7 +9,7 @@ extern crate num;
 extern crate console_backend;
 
 
-mod scrolling_message_console;
+mod widgets;
 mod game;
 mod game_handler;
 mod map;
