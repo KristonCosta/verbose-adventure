@@ -36,7 +36,7 @@ impl Transformer {
         } else {
             console.scale_modifier.0 = desired / actual;
         }
-        println!("Changed scaling to {:?}", console.scale_modifier);
+        console.set_dirty();
     }
 }
 
@@ -150,7 +150,6 @@ impl ConsoleBuilder {
             Some(size) => ((scale.0 / size.0) as u32, (scale.1 / size.1) as u32)
         };
         self.scale = scale;
-        println!("Changing scale to: {:?}", self.scale);
         self
     }
 
@@ -206,7 +205,6 @@ impl ConsoleBuilder {
     }
 
     pub fn relative_to(&mut self, console: &Console) -> &mut Self {
-        println!("Relative to {:?} {:?}", console.screen_scaling, console.screen_offset);
         self.relative = Some(
             RelativeConsole {
                 scale: console.screen_scaling,
@@ -233,7 +231,6 @@ impl ConsoleBuilder {
             Some(relative) => {
                 let offset = (offset.0 + relative.offset.0, offset.1 + relative.offset.1);
                 let scale = (self.scale.0 * relative.scale.0, self.scale.1 * relative.scale.1);
-                println!("Blak to {:?} {:?}", offset, scale);
                 Console::new(res, gl, self.size, scale, offset, self.background, self.layer, self.font_info.clone())
             }
         }
@@ -392,8 +389,8 @@ impl Console {
         num_glyphs
     }
 
-    fn set_scaling_modifier(&mut self, modifier: (f32, f32)) {
-
+    fn set_dirty(&mut self) {
+        self.is_dirty.borrow_mut().set(true);
     }
 
     pub fn render(&self, gl: &gl::Gl) {
