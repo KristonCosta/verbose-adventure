@@ -19,5 +19,6 @@ pub mod theme {
         pub static ref TROLL: Color = *colors::DESATURATED_GREEN;
         pub static ref ORC: Color = *colors::LIGHT_GREEN;
         pub static ref HEALING_ITEM: Color = *colors::LIGHT_SLATE_BLUE;
+        pub static ref SCROLL_ITEM: Color = *colors::LIGHT_YELLOW;
     }
 }

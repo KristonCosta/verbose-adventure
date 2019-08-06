@@ -134,9 +134,17 @@ fn place_objects(map: &Map, room: Rect, objects: &mut Vec<Object>) {
         let y = rand::thread_rng().gen_range(room.y1 + 1, room.y2);
 
         if is_not_blocked(map, x, y, objects) {
-            let mut object = Object::new((x, y), '!', *theme::HEALING_ITEM, "healing potion",  false);
-            object.item = Some(Item::Heal);
-            objects.push(object);
+            let die = rand::random::<f32>();
+            let item = if die < 0.7 {
+                let mut object = Object::new((x, y), '!', *theme::HEALING_ITEM, "healing potion",  false);
+                object.item = Some(Item::Heal);
+                object
+            } else {
+                let mut object = Object::new((x, y), '#', *theme::SCROLL_ITEM, "scroll of lightning", false);
+                object.item = Some(Item::Lightning);
+                object
+            };
+            objects.push(item);
         }
     }
 }

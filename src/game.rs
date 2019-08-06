@@ -15,7 +15,7 @@ use std::collections::{HashMap, HashSet};
 use std::time::Instant;
 use failure::_core::time::Duration;
 use crate::map::{Map, make_map, move_by};
-use crate::object::{Object, Fighter, ai_take_turn, mut_two, DeathCallback};
+use crate::object::{Object, Fighter, ai_take_turn, mut_two, DeathCallback, Item};
 use crate::widgets::scrolling_message_console::ScrollingMessageConsole;
 use crate::theme::theme;
 use std::cmp;
@@ -74,7 +74,11 @@ impl GameImpl {
         } else {
             UseResult::Cancelled
         }
+    }
 
+    fn cast_lightning(&mut self, _inventory_id: usize) -> UseResult {
+        self.message_log.add_colored_message("Your lightning fizzled.", *theme::RED_ALERT_TEXT);
+        UseResult::UsedUp
     }
 
     fn inventory_menu(&mut self, header: String, context: &GameContext) {
@@ -101,7 +105,8 @@ impl GameImpl {
     fn use_item(&mut self, inventory_id: usize) {
         if let Some(item) = &self.inventory[inventory_id].item {
             let on_use = match item {
-                Heal => GameImpl::cast_heal,
+                Item::Heal => GameImpl::cast_heal,
+                Item::Lightning=> GameImpl::cast_lightning,
             };
             match on_use(self, inventory_id) {
                 UseResult::UsedUp => {

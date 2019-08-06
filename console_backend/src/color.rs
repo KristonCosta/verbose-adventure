@@ -14,6 +14,9 @@ pub mod colors {
         pub static ref DESATURATED_GREEN: Color = Color::from_int(25, 125, 35, 1.0);
         pub static ref LIGHT_GREEN: Color = Color::from_int(90, 165, 30, 1.0);
         pub static ref LIGHT_SLATE_BLUE: Color = Color::from_int(160, 65, 255, 1.0);
+        pub static ref LIGHT_YELLOW: Color = Color::from_int(255, 255, 0, 1.0);
+        pub static ref YELLOW: Color = Color::from_int(200, 200, 0, 1.0);
+        pub static ref DARK_YELLOW: Color = Color::from_int(120, 120, 0, 1.0);
     }
 }
 

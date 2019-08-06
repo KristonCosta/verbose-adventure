@@ -19,6 +19,7 @@ pub fn mut_two<T>(first_index: usize, second_index: usize, items: &mut [T]) -> (
 #[derive(Debug)]
 pub enum Item {
     Heal,
+    Lightning,
 }
 
 #[derive(Debug)]
