@@ -3,6 +3,7 @@ use crate::map::{Map, move_by};
 use std::cmp;
 use crate::widgets::scrolling_message_console::ScrollingMessageConsole;
 use num::clamp;
+use crate::theme::theme;
 
 pub fn mut_two<T>(first_index: usize, second_index: usize, items: &mut [T]) -> (&mut T, &mut T) {
     assert_ne!(first_index, second_index);
@@ -53,7 +54,7 @@ impl Object {
         ((dx.pow(2) + dy.pow(2)) as f32).sqrt()
     }
 
-    pub fn take_damage(&mut self, damage: i32) {
+    pub fn take_damage(&mut self, damage: i32, messages: &mut ScrollingMessageConsole) {
         if let Some(fighter) = self.fighter.as_mut() {
             if damage > 0 {
                 fighter.hp -= damage;
@@ -62,7 +63,7 @@ impl Object {
         if let Some(fighter) = self.fighter {
             if fighter.hp <= 0 {
                 self.alive = false;
-                fighter.on_death.callback(self);
+                fighter.on_death.callback(self, messages);
             }
         }
     }
@@ -73,7 +74,7 @@ impl Object {
             messages.add_message(format!(
                 "{} attacks {} for {} hit points.",
                 self.name, target.name, damage).as_str());
-            target.take_damage(damage);
+            target.take_damage(damage, messages);
         } else {
             messages.add_message(format!(
                 "{} attacks {} but it has no effect!",
@@ -126,25 +127,25 @@ pub enum DeathCallback {
     Monster
 }
 impl DeathCallback {
-    fn callback(self, object: &mut Object) {
+    fn callback(self, object: &mut Object, messages: &mut ScrollingMessageConsole) {
         use DeathCallback::*;
-        let callback: fn(&mut Object) = match self {
+        let callback: fn(&mut Object, messages: &mut ScrollingMessageConsole) = match self {
             Player => player_death,
             Monster => monster_death,
         };
-        callback(object);
+        callback(object, messages);
     }
 }
 
-fn player_death(player: &mut Object) {
-    println!("You died!");
+fn player_death(player: &mut Object, messages: &mut ScrollingMessageConsole) {
+    messages.add_colored_message("You died!", *theme::RED_ALERT_TEXT);
 
     player.glyph = '%';
     player.color = Color::from_int(120, 30, 30, 1.0);
 }
 
-fn monster_death(monster: &mut Object) {
-    println!("{} is dead!", monster.name);
+fn monster_death(monster: &mut Object, messages: &mut ScrollingMessageConsole) {
+    messages.add_colored_message(&format!("{} is dead!", monster.name), *theme::GREEN_ALERT_TEXT);
 
     monster.glyph = '%';
     monster.color = Color::from_int(120, 30, 30, 1.0);

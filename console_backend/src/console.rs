@@ -25,18 +25,17 @@ impl Transformer {
         match self {
             Transformer::AspectRatio(desired, actual ) => Transformer::apply_aspect_ratio(console, *desired, *actual)
         }
+        console.set_dirty();
         self
     }
 
     fn apply_aspect_ratio(console: &mut Console, desired: f32, actual: f32) {
-        // x / y = desired   cx / cy = actual  y/desired = cy/actual, y = cy * desired/actual
         console.scale_modifier = (1.0, 1.0);
         if desired > actual {
             console.scale_modifier.1 = actual / desired;
         } else {
             console.scale_modifier.0 = desired / actual;
         }
-        console.set_dirty();
     }
 }
 
