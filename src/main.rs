@@ -16,7 +16,7 @@ mod map;
 mod object;
 mod debug;
 mod theme;
-
+mod fov;
 use crate::debug::failure_to_string;
 
 use crate::game_handler::GameHandler;

@@ -14,6 +14,7 @@ use glutin::{
 };
 use core::ptr;
 use crate::color::colors;
+use nalgebra_glm::scale;
 
 
 pub enum Transformer {
@@ -75,6 +76,11 @@ impl Dirty {
     }
 }
 
+struct RelativeConsole {
+    scale: (f32, f32),
+    offset: (f32, f32),
+}
+
 pub struct ConsoleBuilder {
     size: (u32, u32),
     scale: (f32, f32),
@@ -82,6 +88,8 @@ pub struct ConsoleBuilder {
     layer: u32,
     background: Color,
     font: String,
+    relative: Option<RelativeConsole>,
+    centered: bool,
 }
 
 impl ConsoleBuilder {
@@ -93,6 +101,8 @@ impl ConsoleBuilder {
             layer: 1,
             background: *colors::BLACK,
             font: "droid-sans-mono.ttf".to_string(),
+            relative: None,
+            centered: false,
         }
     }
 
@@ -132,6 +142,11 @@ impl ConsoleBuilder {
         self
     }
 
+    pub fn centered(&mut self, centered: bool) -> &mut Self {
+        self.centered = centered;
+        self
+    }
+
     pub fn top_align(&mut self) -> &mut Self {
         self.offset = (self.offset.0, (1.0 - self.scale.1) * 2.0);
         self
@@ -147,11 +162,33 @@ impl ConsoleBuilder {
         self
     }
 
+    pub fn relative_to(&mut self, console: &Console) -> &mut Self {
+        println!("Relative to {:?} {:?}", console.screen_scaling, console.screen_offset);
+        self.relative = Some(
+            RelativeConsole {
+                scale: console.screen_scaling,
+                offset: console.screen_offset,
+            }
+        );
+        self
+    }
+
     pub fn build(&self, res: &Resources, gl: &gl::Gl) -> Result<Console, failure::Error> {
         // Left bias the offset
-        let offset = (self.offset.0 - (1.0 - self.scale.0), self.offset.1 - (1.0 - self.scale.1));
-        println!("Calculated offset {:?}", offset);
-        Console::new(res, gl, self.size, self.scale, offset, self.background, self.layer)
+        let offset = if self.centered {
+            self.offset // (self.offset.1 + self.scale.0 / 2.0, self.offset.1 + self.scale.0 / 2.0)
+        } else {
+            (self.offset.0 - (1.0 - self.scale.0), self.offset.1 - (1.0 - self.scale.1))
+        };
+        match &self.relative {
+            None => Console::new(res, gl, self.size, self.scale, offset, self.background, self.layer),
+            Some(relative) => {
+                let offset = (offset.0 + relative.offset.0, offset.1 + relative.offset.1);
+                let scale = (self.scale.0 * relative.scale.0, self.scale.1 * relative.scale.1);
+                println!("Blak to {:?} {:?}", offset, scale);
+                Console::new(res, gl, self.size, scale, offset, self.background, self.layer)
+            }
+        }
     }
 }
 

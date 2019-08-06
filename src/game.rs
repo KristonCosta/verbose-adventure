@@ -19,6 +19,7 @@ use crate::object::{Object, Fighter, ai_take_turn, mut_two, DeathCallback};
 use crate::scrolling_message_console::ScrollingMessageConsole;
 use crate::theme::theme;
 use std::cmp;
+use crate::fov::calculate_fov;
 
 pub trait Game {
     fn new(context: &GameContext, size: LogicalSize) -> Self;
@@ -46,6 +47,7 @@ pub struct GameImpl {
     keyboard: HashMap<VirtualKeyCode, bool>,
     input_limiter: Instant,
     message_log: ScrollingMessageConsole,
+    game_over: Console,
 }
 
 impl GameImpl {
@@ -124,9 +126,10 @@ impl GameImpl {
     }
 
     fn set_window_ratios(&mut self, size: LogicalSize) {
-        Transformer::AspectRatio(16.0 / 10.0, (size.width / size.height) as f32)
+        Transformer::AspectRatio(16.0 / 12.0, (size.width / size.height) as f32)
             .apply(&mut self.console)
             .apply(&mut self.console_term)
+            .apply(&mut self.game_over)
             .apply(&mut self.message_log.console);
     }
 }
@@ -168,6 +171,15 @@ impl Game for GameImpl  {
                 .build(&res, &context.gl)
                 .unwrap();
 
+        let game_over = ConsoleBuilder::new((10, 1))
+            .scale((0.5, 0.1))
+            .background(*theme::BACKGROUND)
+            .layer(10)
+            .centered(true)
+            .relative_to(&console)
+            .build(&res, &context.gl)
+            .unwrap();
+
         let mut message_log = ScrollingMessageConsole::new(console_message_log, 10);
         message_log.add_colored_message("Oh man this is spooky.", *theme::RED_ALERT_TEXT);
         let input_map: HashMap<VirtualKeyCode, bool> = [].iter().cloned().collect();
@@ -193,6 +205,7 @@ impl Game for GameImpl  {
             map,
             console_term,
             message_log,
+            game_over,
             inventory: vec![],
             keyboard:input_map,
             input_limiter: Instant::now(),
@@ -203,23 +216,30 @@ impl Game for GameImpl  {
 
     fn render(&mut self, context: &GameContext) {
         let gl = &context.gl;
-        unsafe {
-          //  gl.PolygonMode( gl::FRONT_AND_BACK, gl::LINE );
-
-        }
         self.color_buffer.clear(&gl);
         self.console.clear();
+        let visible_tiles = calculate_fov(self.objects[0].position, 10, &self.map);
         for x in 0..self.map.len() {
             for y in 0..self.map[x].len() {
                 if !(self.map[x][y].block_sight) {
+                    let color = if visible_tiles.contains(&(x as i32, y as i32)) {
+                        *theme::COLOR_LIGHT_FLOOR
+                    } else {
+                        *theme::COLOR_DARK_FLOOR
+                    };
                     self.console.put_char(
                         ' ',
-                        x as i32, y as i32, *colors::CLEAR, Some(*theme::COLOR_DARK_FLOOR), 1);
+                        x as i32, y as i32, *colors::CLEAR, Some(color), 1);
 
                 } else {
+                    let color = if visible_tiles.contains(&(x as i32, y as i32)) {
+                        *theme::COLOR_LIGHT_WALL
+                    } else {
+                        *theme::COLOR_DARK_WALL
+                    };
                     self.console.put_char(
                         ' ',
-                        x as i32, y as i32, *colors::CLEAR, Some(*theme::COLOR_DARK_WALL), 1)
+                        x as i32, y as i32, *colors::CLEAR, Some(color), 1)
                 }
             }
         }
@@ -228,7 +248,9 @@ impl Game for GameImpl  {
                 true => 3,
                 false => 2,
             };
-            self.console.put_char(obj.glyph, obj.position.0, obj.position.1, obj.color, Some(*colors::CLEAR), layer);
+            if visible_tiles.contains(&(obj.position)) {
+                self.console.put_char(obj.glyph, obj.position.0, obj.position.1, obj.color, Some(*colors::CLEAR), layer);
+            }
         }
         self.console.render(&gl);
         self.console_term.clear();
@@ -240,6 +262,7 @@ impl Game for GameImpl  {
                 count += 1;
             }
         }
+
         self.console_term.render(&gl);
         self.message_log.render(&gl);
     }
