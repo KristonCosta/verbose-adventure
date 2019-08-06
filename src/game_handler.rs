@@ -30,8 +30,8 @@ pub struct GameContext {
 
 impl GameContext {
     #[allow(dead_code)]
-    pub fn dt(&self, time: Instant) -> f32 {
-        (self.start_time - time).as_secs_f32()
+    pub fn dt(&self, time: Instant) -> f64 {
+        (Instant::now() - time).as_micros() as f64 / 1_000_000.0
     }
     #[allow(dead_code)]
     pub fn elapsed(&self) -> Duration {
@@ -111,7 +111,7 @@ impl GameHandler {
         let mut game = G::new(&context, self.size);
         event_loop.run(move |event, _, control_flow| {
             let now = Instant::now();
-            let dt = (now - last_frame).as_micros() as f64 / 1_000_000.0;
+            let dt = context.dt(last_frame);
             let delay = clamp((now - last_frame).as_millis() , 0, 8);
             thread::sleep(Duration::from_millis((8 - delay) as u64));
             last_frame = now;
