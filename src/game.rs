@@ -89,7 +89,7 @@ impl GameImpl {
         };
         let mut max = header.len();
         options.iter().for_each(|option| {
-            if option.len() > max {
+            if max < option.len() {
                 max = option.len()
             }});
         let menu = Menu::new(&context.gl,
@@ -103,6 +103,9 @@ impl GameImpl {
     }
 
     fn use_item(&mut self, inventory_id: usize) {
+        if self.inventory.len() <= inventory_id {
+            return;
+        }
         if let Some(item) = &self.inventory[inventory_id].item {
             let on_use = match item {
                 Item::Heal => GameImpl::cast_heal,

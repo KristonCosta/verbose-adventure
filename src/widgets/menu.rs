@@ -61,6 +61,7 @@ impl Menu {
             let ch = string_key.chars().take(1).next().unwrap();
             let index = ch.to_ascii_lowercase() as usize - 'a' as usize;
             if index < self.options.len() {
+                println!("{} {}", index, self.options.len());
                 Some(index)
             } else {
                 None

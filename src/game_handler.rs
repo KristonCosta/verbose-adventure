@@ -19,12 +19,14 @@ use std::ops::Add;
 use std::thread;
 use nalgebra::max;
 use num::clamp;
+use console_backend::Viewport;
 
 pub const WINDOW_NAME: &str = "Hello Glutin";
 
 pub struct GameContext {
     pub gl: Gl,
     pub window: ContextWrapper<PossiblyCurrent, Window>,
+    pub viewport: Viewport,
     start_time: Instant,
 }
 
@@ -88,10 +90,13 @@ impl GameHandler {
         let _gl = gl::Gl::load_with(|ptr| context.get_proc_address(ptr) as *const _);
         unsafe { _gl.Enable(gl::DEPTH_TEST); }
 
+        let viewport = Viewport::for_window(size, &windowed_context.window());
+
         let game_context = GameContext {
             gl: _gl,
             window: windowed_context,
             start_time: Instant::now(),
+            viewport,
         };
 
         Ok(GameHandler {
@@ -106,20 +111,22 @@ impl GameHandler {
     pub fn run<G: Game + 'static>(&mut self) -> Result<(), failure::Error>{
         let mut last_frame = Instant::now();
 
-        let context = self.context.take().unwrap();
+        let mut context = self.context.take().unwrap();
         let event_loop = self.event_loop.take().unwrap();
         let mut game = G::new(&context, self.size);
         event_loop.run(move |event, _, control_flow| {
             let now = Instant::now();
             let dt = context.dt(last_frame);
             let delay = clamp((now - last_frame).as_millis() , 0, 8);
-            thread::sleep(Duration::from_millis((8 - delay) as u64));
+            // thread::sleep(Duration::from_millis((8 - delay) as u64));
             last_frame = now;
             let mut pending_input = None;
 
             match event {
                 Event::EventsCleared => {
-                     context.window.window().request_redraw();
+                    let gl = context.gl.clone();
+                    context.viewport.set_used(&gl);
+                    context.window.window().request_redraw();
                 },
                 Event::WindowEvent {
                     event: WindowEvent::Resized(size),
@@ -127,7 +134,9 @@ impl GameHandler {
                 } => {
                     let window: &Window = context.window.window();
                     game.resize(size);
+                    context.viewport.update_size(size, &context.window.window());
                     let size = size.to_physical(window.hidpi_factor());
+                    println!("resize: {:?}", size);
                     context.window.resize(size);
                 },
                 Event::WindowEvent {
