@@ -36,6 +36,7 @@ impl Transformer {
         } else {
             console.scale_modifier.0 = desired / actual;
         }
+        println!("Scaling {:?}", console.scale_modifier);
     }
 }
 

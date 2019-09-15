@@ -1,4 +1,3 @@
-#![feature(duration_float)]
 #[macro_use] extern crate failure;
 #[macro_use] extern crate render_gl_derive;
 #[macro_use] extern crate lazy_static;
