@@ -128,6 +128,7 @@ impl GameImpl {
                 data: key,
                 ..
             }) => {
+                self.has_moved = true;
                 if let Some(menu) = &mut self.active_menu {
                     let index = menu.process_input(key);
                     if let Some(index) = index {
@@ -187,7 +188,6 @@ impl GameImpl {
                 }
                 None => {
                     move_by(0, dx, dy, &self.map, &mut self.objects);
-                    self.has_moved = true;
                 }
             }
         }

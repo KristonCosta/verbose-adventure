@@ -8,6 +8,7 @@ mod console_vertex;
 mod glyph;
 pub mod resources;
 mod render_gl;
+mod renderable;
 
 pub use render_gl::data;
 pub use console::{

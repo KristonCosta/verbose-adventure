@@ -38,11 +38,7 @@ impl ScrollingMessageConsole {
         self.console.clear();
         let mut current_height: i32 = (self.height - 1) as i32;
         for (message, color) in self.messages.iter() {
-            let mut x = 0;
-            for c in message.chars() {
-                self.console.put_char(c, x, current_height as i32, *color, Some(*colors::CLEAR), 3);
-                x += 1;
-            }
+            self.console.put_text(message, 0 , current_height as i32, *color, Some(*colors::CLEAR), 3);
             current_height -= 1;
         }
     }
