@@ -1,6 +1,7 @@
 use image::{DynamicImage, Rgba, RgbaImage};
 use rusttype::{point, Font, Scale, PositionedGlyph};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
+use unicode_normalization::UnicodeNormalization;
 
 #[derive(Debug, Clone)]
 pub struct BoundingBox {
@@ -94,7 +95,7 @@ fn prepare_glyphs(data:Vec<u8>, text: &str, height: f32) -> (DynamicImage, Vec<P
 }
 
 pub fn load_bitmap(data: Vec<u8>) -> (DynamicImage, HashMap<char, BoundingBox>) {
-    let text = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ12345567890!@#$%^&/\\*()?<>|,.1234567890:-'\"s";
+    let text = "╚║╗╝═╔╚║╗╝abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ12345567890!@#$%^&/\\*()?<>|,.1234567890:-'\"";
     let height = 100.0;
     let (image, glyphs, (glyphs_width, glyphs_height)) = prepare_glyphs(data, text, height);
 
@@ -103,7 +104,6 @@ pub fn load_bitmap(data: Vec<u8>) -> (DynamicImage, HashMap<char, BoundingBox>) 
 
     for glyph in glyphs.iter() {
         if let Some(bounding_box) = glyph.pixel_bounding_box() {
-
             map.insert(text.chars().nth(counter).unwrap(), BoundingBox{
                 x1: glyph.position().x as i32,
                 x2: bounding_box.max.x,

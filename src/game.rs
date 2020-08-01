@@ -294,7 +294,7 @@ impl Game for GameImpl  {
             .build(&res, &context.gl)
             .unwrap();
 
-        let console_message_log = ConsoleBuilder::with_dimensions((120, 10))
+        let console_message_log = ConsoleBuilder::with_dimensions((120, 12))
                 .scale((1.0, 0.25))
                 .font_from(&console)
                 .background(*theme::BACKGROUND)
@@ -313,7 +313,7 @@ impl Game for GameImpl  {
             .unwrap();
 
 
-        let mut message_log = ScrollingMessageConsole::new(console_message_log, 10);
+        let mut message_log = ScrollingMessageConsole::new(console_message_log, 12);
         message_log.add_colored_message("Oh man this is spooky.", *theme::RED_ALERT_TEXT);
         let input_map: HashMap<VirtualKeyCode, bool> = [].iter().cloned().collect();
         let mut objects = vec![];

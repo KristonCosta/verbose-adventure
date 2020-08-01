@@ -114,10 +114,15 @@ impl GameHandler {
         let mut context = self.context.take().unwrap();
         let event_loop = self.event_loop.take().unwrap();
         let mut game = G::new(&context, self.size);
+        let mut fps_updater = Instant::now();
         event_loop.run(move |event, _, control_flow| {
             let now = Instant::now();
             let dt = context.dt(last_frame);
             let delay = clamp((now - last_frame).as_millis() , 0, 8);
+            if (now - fps_updater).as_secs() >= 1 {
+                fps_updater = Instant::now();
+                context.window.window().set_title(&format!("FPS: {:?}", 1.0/dt));
+            }
             // thread::sleep(Duration::from_millis((8 - delay) as u64));
             last_frame = now;
             let mut pending_input = None;
@@ -161,7 +166,6 @@ impl GameHandler {
                     },
                     ..
                 } => {
-                    // context.camera.turn(x as f32 * 0.05, y as f32 * 0.05);
                     pending_input = Some(
                         MouseMoved(x as f32, y as f32)
                     );
@@ -181,7 +185,6 @@ impl GameHandler {
                             pos.y as f32
                         },
                     };
-                    // context.camera.zoom(scroll);
                 },
                 Event::WindowEvent {
                     event: WindowEvent::KeyboardInput {

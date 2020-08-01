@@ -106,7 +106,7 @@ impl ConsoleBuilder {
             offset: (0.0, 0.0),
             layer: 1,
             background: *colors::BLACK,
-            font: "droid-sans-mono.ttf".to_string(),
+            font: "ubuntu-mono-regular.ttf".to_string(),
             relative: None,
             centered: false,
             font_size: None,
@@ -121,7 +121,7 @@ impl ConsoleBuilder {
             offset: (0.0, 0.0),
             layer: 1,
             background: *colors::BLACK,
-            font: "droid-sans-mono.ttf".to_string(),
+            font: "ubuntu-mono-regular.ttf".to_string(),
             relative: None,
             centered: false,
             font_size: Some(size),
@@ -136,7 +136,7 @@ impl ConsoleBuilder {
             offset: (0.0, 0.0),
             layer: 1,
             background: *colors::BLACK,
-            font: "droid-sans-mono.ttf".to_string(),
+            font: "ubuntu-mono-regular.ttf".to_string(),
             relative: None,
             centered: false,
             font_size: Some(font_size),
@@ -253,8 +253,9 @@ impl Console {
         let font_info = match font {
             Some(font) => font,
             None => {
-                let font_bytes = res.load_bytes_from_file("droid-sans-mono.ttf").unwrap();
+                let font_bytes = res.load_bytes_from_file("ubuntu-mono-regular.ttf").unwrap();
                 let (font_img, glyph_map) = load_bitmap(font_bytes);
+                font_img.save("321.png");
                 let texture_scale_u32 = font_img.dimensions();
                 let texture = Texture::from_img(gl, font_img, gl::RGBA)?;
                 let texture_scale = (texture_scale_u32.0 as i32, texture_scale_u32.1 as i32);
@@ -337,9 +338,9 @@ impl Console {
     }
 
     fn load_gl(&self, gl: &gl::Gl) -> i32 {
+        let start = std::time::Instant::now();
         let mut vertices: Vec<Vertex> = vec![];
         let mut indices: Vec<gl::types::GLuint> = vec![];
-
         let mut num_glyphs = 0;
         for (index, glyph) in self.glyphs.iter() {
             let bounding_box = self.font_info.glyph_map.get(&glyph.character).unwrap();
@@ -372,20 +373,21 @@ impl Console {
             ]);
             num_glyphs += 1;
         }
+        if num_glyphs > 0 {
+            self.vao.bind();
 
-        self.vao.bind();
+            self.vbo.bind();
+            self.vbo.dynamic_draw_data(&vertices);
 
-        self.vbo.bind();
-        self.vbo.dynamic_draw_data(&vertices);
+            self.ebo.bind();
+            self.ebo.dynamic_draw_data(&indices);
 
-        self.ebo.bind();
-        self.ebo.dynamic_draw_data(&indices);
+            Vertex::vertex_attrib_pointers(&gl);
 
-        Vertex::vertex_attrib_pointers(&gl);
-
-        self.vbo.unbind();
-        self.vao.unbind();
-        self.ebo.unbind();
+            self.vbo.unbind();
+            self.vao.unbind();
+            self.ebo.unbind();
+        }
         num_glyphs
     }
 
@@ -393,11 +395,16 @@ impl Console {
         self.is_dirty.borrow_mut().set(true);
     }
 
+    pub fn dimensions(&self) -> (u32, u32) {
+        self.dimensions
+    }
+
     pub fn render(&self, gl: &gl::Gl) {
+        let start = std::time::Instant::now();
         unsafe {
             gl.Enable(gl::DEPTH_TEST);
         }
-        if self.is_dirty.borrow().0 {
+        if self.is_dirty.borrow().0 || true {
             let num_glyphs = self.load_gl(&gl);
             self.is_dirty.borrow_mut().set(false);
             self.num_vert.borrow_mut().set(num_glyphs);
