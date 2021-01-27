@@ -118,12 +118,12 @@ impl GameHandler {
         event_loop.run(move |event, _, control_flow| {
             let now = Instant::now();
             let dt = context.dt(last_frame);
-            let delay = clamp((now - last_frame).as_millis() , 0, 8);
+            let delay = clamp((now - last_frame).as_millis() , 0, 17);
             if (now - fps_updater).as_secs() >= 1 {
                 fps_updater = Instant::now();
                 context.window.window().set_title(&format!("FPS: {:?}", 1.0/dt));
             }
-            // thread::sleep(Duration::from_millis((8 - delay) as u64));
+            thread::sleep(Duration::from_millis((17 - delay) as u64));
             last_frame = now;
             let mut pending_input = None;
 

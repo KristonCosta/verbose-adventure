@@ -24,7 +24,7 @@ impl ScrollingMessageConsole {
 
     pub fn add_colored_message(&mut self, message: &str, color: Color) {
         self.messages.push_back((message.to_string(), color));
-        let extra = (self.messages.len() as i32) - (self.height as i32);
+        let extra = (self.messages.len() as i32) - (self.height as i32) + 2;
 
         if extra > 0 {
             for _ in 0..extra {
@@ -39,7 +39,7 @@ impl ScrollingMessageConsole {
         self.console.clear();
         let x = "║═╔╗╚╝";
         let (width, height) = self.console.dimensions();
-        let top = format!("╗{}╗", std::iter::repeat("═").take(width as usize - 2).collect::<String>());
+        let top = format!("╔{}╗", std::iter::repeat("═").take(width as usize - 2).collect::<String>());
         let bottom = format!("╚{}╝", std::iter::repeat("═").take(width as usize - 2).collect::<String>());
         self.console.put_text(&top, 0, self.height as i32 - 1, *colors::WHITE, Some(*colors::CLEAR), 3);
         let mut current_height: i32 = (self.height - 2) as i32;
